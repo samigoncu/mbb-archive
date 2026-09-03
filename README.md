@@ -116,6 +116,56 @@ operations.verification_runs
 operations.recovery_drills
 ```
 
+## Kurulum ve çalıştırma
+
+Gereksinimler: **Docker Desktop**, **.NET 10 SDK**, **Node.js 22+**.
+Python worker'ları Docker içinde çalışır; yerel Python kurulumu gerekmez.
+
+```bash
+git clone <depo-adresi>
+cd mbb-archive-v1.3-operations
+
+cp .env.example .env
+cp web/.env.example web/.env
+
+./start.sh          # macOS / Linux
+start.bat           # Windows
+```
+
+`start.sh` sırasıyla şunları yapar:
+
+```text
+1  Altyapı        PostgreSQL, RabbitMQ, OpenSearch, ClamAV
+2  Derleme        dotnet build
+3  Şema           13 modülün EF migration'ı
+4  Worker'lar     PDF metin çıkarımı + OCR (Docker)
+5  Servisler      API + güvenlik tarama worker'ı
+6  Arayüz         Next.js
+```
+
+Açılan adresler:
+
+```text
+Arayüz      http://localhost:3000
+API         http://localhost:5080
+OpenAPI     http://localhost:5080/openapi/v1.json
+RabbitMQ    http://localhost:15672
+OpenSearch  http://localhost:5601
+```
+
+Durdurmak için `Ctrl+C`; Docker konteynerleri ayrıca kapatılır:
+
+```bash
+docker compose -f deploy/compose.workers.yml down
+docker compose -f deploy/compose.infrastructure.yml -p deploy down
+```
+
+### Yerel veri
+
+Yüklenen belgelerin orijinalleri, OCR çıktıları ve loglar `.local-data/`
+altında tutulur ve depoya dahil edilmez. Sıfırdan başlamak için bu dizini ve
+Docker volume'larını silmek yeterlidir.
+
 ## First VS Code compiler gate
 
 ```bash
