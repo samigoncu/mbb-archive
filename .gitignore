@@ -26,3 +26,8 @@ artifacts/
 # fazla kopya bırakıyor). Proje kaynağı değildir.
 **/.claude/skills/
 **/.codex/skills/
+
+# Derleme/çalışma zamanı önbellekleri.
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
