@@ -1,0 +1,1 @@
+using Mbb.Archive.BuildingBlocks.Application;namespace Mbb.Archive.Modules.Retention.Application.Cases.Schedule;public sealed record ScheduleRetentionCaseCommand(Guid MessageId,string EventName,Guid ArchiveRecordId,Guid DocumentId,string RuleCode,DateTimeOffset DeclaredAt):ICommand<Guid>;

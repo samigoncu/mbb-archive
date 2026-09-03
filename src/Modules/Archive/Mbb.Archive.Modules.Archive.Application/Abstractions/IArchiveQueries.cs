@@ -1,0 +1,1 @@
+using Mbb.Archive.Modules.Archive.Application.Records.Get;namespace Mbb.Archive.Modules.Archive.Application.Abstractions;public interface IArchiveQueries{Task<ArchiveRecordDetails?> GetAsync(Guid id,CancellationToken ct);}

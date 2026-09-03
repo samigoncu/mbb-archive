@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Architecture rules
+        run: python scripts/verify_architecture.py
+
+      - name: Python worker syntax
+        run: python -m compileall -q src/Workers/python
+
+      - name: Python worker common tests
+        env:
+          PYTHONPATH: src/Workers/python/common
+        run: python -m unittest discover -s src/Workers/python/tests -v
+
+      - name: Backend restore
+        run: dotnet restore Mbb.Archive.slnx
+
+      - name: Backend build
+        run: dotnet build Mbb.Archive.slnx --configuration Release --no-restore
+
+      - name: Backend tests
+        run: dotnet test Mbb.Archive.slnx --configuration Release --no-build
+
+      # package-lock.json ilk VS Code restore'unda commit edildikten sonra `npm ci` kullanılmalıdır.
+      - name: Frontend install
+        working-directory: web
+        run: npm install --no-audit --no-fund
+
+      - name: Frontend typecheck
+        working-directory: web
+        run: npm run typecheck
+
+      - name: Frontend build
+        working-directory: web
+        run: npm run build

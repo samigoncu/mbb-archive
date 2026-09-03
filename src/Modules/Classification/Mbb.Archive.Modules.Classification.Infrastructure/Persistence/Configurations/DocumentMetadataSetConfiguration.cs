@@ -1,0 +1,6 @@
+using Microsoft.EntityFrameworkCore;using Microsoft.EntityFrameworkCore.Metadata.Builders;using Mbb.Archive.Modules.Classification.Domain.Documents;using Mbb.Archive.Modules.Classification.Domain.Metadata;
+namespace Mbb.Archive.Modules.Classification.Infrastructure.Persistence.Configurations;
+internal sealed class DocumentMetadataSetConfiguration : IEntityTypeConfiguration<DocumentMetadataSet>
+{
+ public void Configure(EntityTypeBuilder<DocumentMetadataSet>b){b.ToTable("document_metadata_sets",ClassificationSchema.Name);b.HasKey(x=>x.Id);b.Property(x=>x.Id).HasColumnName("id").HasConversion(id=>id.Value,v=>new DocumentMetadataSetId(v)).ValueGeneratedNever();b.Property(x=>x.DocumentId).HasColumnName("document_id");b.Property(x=>x.SchemaId).HasColumnName("schema_id").HasConversion(id=>id.Value,v=>new MetadataSchemaId(v));b.Property(x=>x.SchemaVersion).HasColumnName("schema_version");b.Property(x=>x.ValuesJson).HasColumnName("values_json").HasColumnType("jsonb");b.Property(x=>x.UpdatedAt).HasColumnName("updated_at");b.Property(x=>x.ConcurrencyVersion).HasColumnName("concurrency_version").IsConcurrencyToken();b.Ignore(x=>x.DomainEvents);b.HasIndex(x=>new{x.DocumentId,x.SchemaId}).IsUnique().HasDatabaseName("ux_document_metadata_schema");}
+}

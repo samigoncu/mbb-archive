@@ -1,0 +1,6 @@
+using Microsoft.EntityFrameworkCore;using Microsoft.EntityFrameworkCore.Metadata.Builders;using Mbb.Archive.Modules.Classification.Domain.Metadata;
+namespace Mbb.Archive.Modules.Classification.Infrastructure.Persistence.Configurations;
+internal sealed class MetadataFieldDefinitionConfiguration : IEntityTypeConfiguration<MetadataFieldDefinition>
+{
+ public void Configure(EntityTypeBuilder<MetadataFieldDefinition>b){b.ToTable("metadata_fields",ClassificationSchema.Name);b.HasKey(x=>x.Id);b.Property(x=>x.Id).HasColumnName("id").ValueGeneratedNever();b.Property(x=>x.SchemaId).HasColumnName("schema_id").HasConversion(id=>id.Value,v=>new MetadataSchemaId(v));b.Property(x=>x.Key).HasColumnName("key").HasMaxLength(120);b.Property(x=>x.Label).HasColumnName("label").HasMaxLength(300);b.Property(x=>x.FieldType).HasColumnName("field_type").HasConversion<string>().HasMaxLength(50);b.Property(x=>x.IsRequired).HasColumnName("is_required");b.Property(x=>x.IsSearchable).HasColumnName("is_searchable");b.Property(x=>x.IsRepeatable).HasColumnName("is_repeatable");b.Property(x=>x.OptionsJson).HasColumnName("options_json").HasColumnType("jsonb");b.HasIndex(x=>new{x.SchemaId,x.Key}).IsUnique().HasDatabaseName("ux_metadata_field_key");}
+}

@@ -1,0 +1,6 @@
+using Microsoft.EntityFrameworkCore;using Microsoft.EntityFrameworkCore.Metadata.Builders;using Mbb.Archive.Modules.Classification.Domain.Documents;using Mbb.Archive.Modules.Classification.Domain.FilePlans;
+namespace Mbb.Archive.Modules.Classification.Infrastructure.Persistence.Configurations;
+internal sealed class DocumentClassificationConfiguration : IEntityTypeConfiguration<DocumentClassification>
+{
+ public void Configure(EntityTypeBuilder<DocumentClassification>b){b.ToTable("document_classifications",ClassificationSchema.Name);b.HasKey(x=>x.Id);b.Property(x=>x.Id).HasColumnName("id").HasConversion(id=>id.Value,v=>new DocumentClassificationId(v)).ValueGeneratedNever();b.Property(x=>x.DocumentId).HasColumnName("document_id");b.Property(x=>x.FilePlanId).HasColumnName("file_plan_id").HasConversion(id=>id.Value,v=>new FilePlanId(v));b.Property(x=>x.FilePlanItemId).HasColumnName("file_plan_item_id").HasConversion(id=>id.Value,v=>new FilePlanItemId(v));b.Property(x=>x.IsPrimary).HasColumnName("is_primary");b.Property(x=>x.ClassifiedAt).HasColumnName("classified_at");b.Ignore(x=>x.DomainEvents);b.HasIndex(x=>new{x.DocumentId,x.FilePlanItemId}).IsUnique().HasDatabaseName("ux_document_classification");b.HasIndex(x=>x.DocumentId).HasDatabaseName("ix_document_classification_document");}
+}

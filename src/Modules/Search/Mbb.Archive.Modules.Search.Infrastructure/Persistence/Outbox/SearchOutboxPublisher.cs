@@ -1,0 +1,16 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Mbb.Archive.BuildingBlocks.Application;
+namespace Mbb.Archive.Modules.Search.Infrastructure.Persistence.Outbox;
+internal sealed class SearchOutboxPublisher:BackgroundService
+{
+    private readonly IServiceScopeFactory _scopeFactory;private readonly IIntegrationEventPublisher _publisher;private readonly SearchOutboxOptions _options;private readonly TimeProvider _time;private readonly ILogger<SearchOutboxPublisher> _logger;private readonly string _workerId;
+    public SearchOutboxPublisher(IServiceScopeFactory sf,IIntegrationEventPublisher pub,IOptions<SearchOutboxOptions> options,TimeProvider time,ILogger<SearchOutboxPublisher> logger){_scopeFactory=sf;_publisher=pub;_options=options.Value;_time=time;_logger=logger;_workerId=$"{Environment.MachineName}:{Environment.ProcessId}:search-outbox:{Guid.CreateVersion7():N}";}
+    protected override async Task ExecuteAsync(CancellationToken ct){while(!ct.IsCancellationRequested){try{var items=await Claim(ct);foreach(var x in items)await Publish(x,ct);if(items.Count==0)await Task.Delay(_options.PollIntervalMilliseconds,ct);}catch(OperationCanceledException)when(ct.IsCancellationRequested){break;}catch(Exception ex){_logger.LogError(ex,"Search Outbox failed.");await Task.Delay(_options.PollIntervalMilliseconds,ct);}}}
+    private async Task<IReadOnlyList<Envelope>> Claim(CancellationToken ct){await using var scope=_scopeFactory.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<SearchDbContext>();var now=_time.GetUtcNow();await using var tx=await db.Database.BeginTransactionAsync(ct);var items=await db.OutboxMessages.FromSqlInterpolated($"""SELECT * FROM search.outbox_messages WHERE processed_at IS NULL AND dead_lettered_at IS NULL AND next_attempt_at <= {now} AND (locked_until IS NULL OR locked_until < {now}) ORDER BY occurred_at LIMIT {_options.BatchSize} FOR UPDATE SKIP LOCKED""").ToListAsync(ct);foreach(var x in items)x.Lease(_workerId,now.AddSeconds(_options.LeaseSeconds));await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return items.Select(x=>new Envelope(x.Id,x.EventName,x.Payload,x.OccurredAt,x.AttemptCount)).ToArray();}
+    private async Task Publish(Envelope e,CancellationToken ct){try{await _publisher.PublishAsync(e.Id,e.EventName,e.Payload,e.OccurredAt,ct);await using var scope=_scopeFactory.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<SearchDbContext>();var row=await db.OutboxMessages.SingleAsync(x=>x.Id==e.Id,ct);row.Published(_workerId,_time.GetUtcNow());await db.SaveChangesAsync(ct);}catch(Exception ex){await using var scope=_scopeFactory.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<SearchDbContext>();var row=await db.OutboxMessages.SingleAsync(x=>x.Id==e.Id,ct);var now=_time.GetUtcNow();var sec=Math.Min(Math.Pow(2,Math.Min(e.AttemptCount+1,20)),_options.MaxBackoffSeconds);row.Failed(_workerId,ex.Message,now,now.AddSeconds(sec),_options.MaxAttempts);await db.SaveChangesAsync(ct);}}
+    private sealed record Envelope(Guid Id,string EventName,string Payload,DateTimeOffset OccurredAt,int AttemptCount);
+}

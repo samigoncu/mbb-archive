@@ -1,0 +1,6 @@
+using Microsoft.EntityFrameworkCore;using Microsoft.EntityFrameworkCore.Metadata;using Microsoft.EntityFrameworkCore.Metadata.Builders;using Mbb.Archive.Modules.Classification.Domain.Metadata;
+namespace Mbb.Archive.Modules.Classification.Infrastructure.Persistence.Configurations;
+internal sealed class MetadataSchemaConfiguration : IEntityTypeConfiguration<MetadataSchema>
+{
+ public void Configure(EntityTypeBuilder<MetadataSchema>b){b.ToTable("metadata_schemas",ClassificationSchema.Name);b.HasKey(x=>x.Id);b.Property(x=>x.Id).HasColumnName("id").HasConversion(id=>id.Value,v=>new MetadataSchemaId(v)).ValueGeneratedNever();b.Property(x=>x.Key).HasColumnName("key").HasMaxLength(120);b.Property(x=>x.Name).HasColumnName("name").HasMaxLength(300);b.Property(x=>x.Version).HasColumnName("version");b.Property(x=>x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(40);b.Property(x=>x.CreatedAt).HasColumnName("created_at");b.Property(x=>x.PublishedAt).HasColumnName("published_at");b.Ignore(x=>x.DomainEvents);b.HasMany(x=>x.Fields).WithOne().HasForeignKey(x=>x.SchemaId).OnDelete(DeleteBehavior.Cascade);b.Metadata.FindNavigation(nameof(MetadataSchema.Fields))?.SetPropertyAccessMode(PropertyAccessMode.Field);b.HasIndex(x=>new{x.Key,x.Version}).IsUnique().HasDatabaseName("ux_metadata_schema_key_version");}
+}

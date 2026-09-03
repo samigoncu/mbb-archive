@@ -1,0 +1,9 @@
+{
+  "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/.next": true
+  },
+  "dotnet.defaultSolution": "Mbb.Archive.slnx"
+}

@@ -1,0 +1,1 @@
+using Mbb.Archive.BuildingBlocks.Application;using Mbb.Archive.Modules.Retention.Domain.Rules;namespace Mbb.Archive.Modules.Retention.Application.Rules.Create;public sealed record CreateRetentionRuleCommand(string Code,string Name,int RetentionMonths,DispositionAction Action):ICommand<Guid>;

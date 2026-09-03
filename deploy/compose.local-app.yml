@@ -1,0 +1,176 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - mbb_archive_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4.3.5-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?RABBITMQ_DEFAULT_USER is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS is required}
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - mbb_archive_rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+
+  clamav:
+    image: clamav/clamav:1.5.4
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - mbb_archive_clamav_db:/var/lib/clamav
+
+  security-scan:
+    build:
+      context: ..
+      dockerfile: deploy/docker/security-scan.Dockerfile
+    environment:
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: ${RABBITMQ_DEFAULT_USER}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS}
+      SecurityScan__Queue: mbb.archive.ingestion.security.v1
+      SecurityScan__StagingRootPath: /data/staging
+      SecurityScan__ClamAvHost: clamav
+      SecurityScan__ClamAvPort: 3310
+    volumes:
+      - mbb_archive_staging:/data/staging:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+
+  pdf-worker:
+    build:
+      context: ..
+      dockerfile: deploy/docker/pdf-worker.Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      STORAGE_PROVIDER: local
+      ORIGINAL_STORAGE_ROOT: /data/originals
+      ARTIFACT_STORAGE_ROOT: /data/artifacts
+    volumes:
+      - mbb_archive_originals:/data/originals:ro
+      - mbb_archive_artifacts:/data/artifacts
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  ocr-worker:
+    build:
+      context: ..
+      dockerfile: deploy/docker/ocr-worker.Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      STORAGE_PROVIDER: local
+      ORIGINAL_STORAGE_ROOT: /data/originals
+      ARTIFACT_STORAGE_ROOT: /data/artifacts
+      OCR_PROVIDER: tesseract
+      OCR_LANGUAGES: tur+eng
+      OCR_RENDER_DPI: 200
+      OCR_SEARCHABLE_PDF_ENABLED: "false"
+    volumes:
+      - mbb_archive_originals:/data/originals:ro
+      - mbb_archive_artifacts:/data/artifacts
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+
+  opensearch:
+    image: opensearchproject/opensearch:3.8.0
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms1g -Xmx1g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - mbb_archive_opensearch:/usr/share/opensearch/data
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:3.8.0
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports:
+      - "5601:5601"
+    depends_on:
+      - opensearch
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/docker/api.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4317
+      OTEL_SERVICE_NAME: Mbb.Archive.Api
+      ConnectionStrings__Documents: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Documents__FileStaging__RootPath: /data/staging
+      Search__OpenSearch__BaseUrl: http://opensearch:9200
+      Search__Artifacts__Provider: Local
+      Search__Artifacts__LocalRootPath: /data/artifacts
+      Documents__OriginalStorage__Provider: Local
+      Documents__OriginalStorage__LocalRootPath: /data/originals
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: ${RABBITMQ_DEFAULT_USER}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5080:8080"
+    volumes:
+      - mbb_archive_staging:/data/staging
+      - mbb_archive_originals:/data/originals
+      - mbb_archive_artifacts:/data/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/docker/web.Dockerfile
+    environment:
+      MBB_ARCHIVE_API_URL: http://api:8080/api/v1
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:5080/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  mbb_archive_postgres:
+  mbb_archive_rabbitmq:
+  mbb_archive_clamav_db:
+  mbb_archive_staging:
+  mbb_archive_originals:
+  mbb_archive_artifacts:
+  mbb_archive_opensearch:

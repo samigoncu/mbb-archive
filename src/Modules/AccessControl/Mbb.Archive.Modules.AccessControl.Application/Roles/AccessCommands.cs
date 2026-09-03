@@ -1,0 +1,1 @@
+using Mbb.Archive.BuildingBlocks.Application;namespace Mbb.Archive.Modules.AccessControl.Application.Roles;public sealed record CreateRoleCommand(string Code,string Name):ICommand<Guid>;public sealed record GrantPermissionCommand(Guid RoleId,string Permission):ICommand;public sealed record AssignRoleCommand(string SubjectId,Guid RoleId):ICommand;

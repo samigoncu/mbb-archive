@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /><ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Presentation/Mbb.Archive.BuildingBlocks.Presentation.csproj" /><ProjectReference Include="../Mbb.Archive.Modules.Search.Application/Mbb.Archive.Modules.Search.Application.csproj" /></ItemGroup>
+</Project>

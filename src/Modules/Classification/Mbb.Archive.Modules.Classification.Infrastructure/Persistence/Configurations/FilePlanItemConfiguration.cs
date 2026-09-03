@@ -1,0 +1,6 @@
+using Microsoft.EntityFrameworkCore;using Microsoft.EntityFrameworkCore.Metadata.Builders;using Mbb.Archive.Modules.Classification.Domain.FilePlans;
+namespace Mbb.Archive.Modules.Classification.Infrastructure.Persistence.Configurations;
+internal sealed class FilePlanItemConfiguration : IEntityTypeConfiguration<FilePlanItem>
+{
+ public void Configure(EntityTypeBuilder<FilePlanItem>b){b.ToTable("file_plan_items",ClassificationSchema.Name);b.HasKey(x=>x.Id);b.Property(x=>x.Id).HasColumnName("id").HasConversion(id=>id.Value,v=>new FilePlanItemId(v)).ValueGeneratedNever();b.Property(x=>x.FilePlanId).HasColumnName("file_plan_id").HasConversion(id=>id.Value,v=>new FilePlanId(v));b.Property(x=>x.ParentId).HasColumnName("parent_id").HasConversion(id=>id==null?(Guid?)null:id.Value.Value,v=>v==null?null:new FilePlanItemId(v.Value));b.Property(x=>x.Code).HasColumnName("code").HasMaxLength(50);b.Property(x=>x.Title).HasColumnName("title").HasMaxLength(500);b.Property(x=>x.Description).HasColumnName("description").HasMaxLength(2000);b.Property(x=>x.Level).HasColumnName("level");b.Property(x=>x.IsSelectable).HasColumnName("is_selectable");b.Property(x=>x.IsActive).HasColumnName("is_active");b.HasIndex(x=>new{x.FilePlanId,x.Code}).IsUnique().HasDatabaseName("ux_file_plan_item_code");}
+}

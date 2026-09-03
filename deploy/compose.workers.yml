@@ -1,0 +1,49 @@
+# Geliştirme ortamı için Python doküman worker'ları.
+# compose.local-app.yml named volume kullanır; burada host'taki .local-data
+# dizinleri bind-mount edilir, böylece yerelde çalışan API ile aynı dosyaları
+# görürler. Mevcut altyapı ağına (deploy_default) bağlanır.
+name: mbb-workers
+
+services:
+  pdf-worker:
+    build:
+      context: ..
+      dockerfile: deploy/docker/pdf-worker.Dockerfile
+    container_name: mbb-archive-pdf-worker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: mbb-archive-rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:?RABBITMQ_DEFAULT_USER is required}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS is required}
+      STORAGE_PROVIDER: local
+      ORIGINAL_STORAGE_ROOT: /data/originals
+      ARTIFACT_STORAGE_ROOT: /data/artifacts
+    volumes:
+      - ../.local-data/originals:/data/originals:ro
+      - ../.local-data/artifacts:/data/artifacts
+
+  ocr-worker:
+    build:
+      context: ..
+      dockerfile: deploy/docker/ocr-worker.Dockerfile
+    container_name: mbb-archive-ocr-worker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: mbb-archive-rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:?RABBITMQ_DEFAULT_USER is required}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS is required}
+      STORAGE_PROVIDER: local
+      ORIGINAL_STORAGE_ROOT: /data/originals
+      ARTIFACT_STORAGE_ROOT: /data/artifacts
+      OCR_PROVIDER: ${OCR_PROVIDER:-tesseract}
+      OCR_LANGUAGES: ${OCR_LANGUAGES:-tur+eng}
+      OCR_RENDER_DPI: ${OCR_RENDER_DPI:-200}
+      OCR_SEARCHABLE_PDF_ENABLED: ${OCR_SEARCHABLE_PDF_ENABLED:-false}
+    volumes:
+      - ../.local-data/originals:/data/originals:ro
+      - ../.local-data/artifacts:/data/artifacts
+
+networks:
+  default:
+    name: deploy_default
+    external: true

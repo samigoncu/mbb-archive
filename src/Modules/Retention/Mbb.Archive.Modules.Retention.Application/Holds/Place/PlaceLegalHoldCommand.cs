@@ -1,0 +1,1 @@
+using Mbb.Archive.BuildingBlocks.Application;namespace Mbb.Archive.Modules.Retention.Application.Holds.Place;public sealed record PlaceLegalHoldCommand(Guid RetentionCaseId,string Reason,string PlacedBy):ICommand<Guid>;

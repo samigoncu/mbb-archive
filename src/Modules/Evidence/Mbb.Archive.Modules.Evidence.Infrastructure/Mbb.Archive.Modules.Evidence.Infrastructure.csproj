@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design"><PrivateAssets>all</PrivateAssets></PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Evidence.Application/Mbb.Archive.Modules.Evidence.Application.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Evidence.Contracts/Mbb.Archive.Modules.Evidence.Contracts.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Evidence.Domain/Mbb.Archive.Modules.Evidence.Domain.csproj" />
+      <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Observability/Mbb.Archive.BuildingBlocks.Observability.csproj" />
+  </ItemGroup>
+</Project>

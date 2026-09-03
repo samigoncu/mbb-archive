@@ -1,0 +1,2 @@
+<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" /><ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Domain/Mbb.Archive.BuildingBlocks.Domain.csproj" /><ProjectReference Include="../Mbb.Archive.Modules.Workflow.Domain/Mbb.Archive.Modules.Workflow.Domain.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Workflow.Contracts/Mbb.Archive.Modules.Workflow.Contracts.csproj" /></ItemGroup></Project>

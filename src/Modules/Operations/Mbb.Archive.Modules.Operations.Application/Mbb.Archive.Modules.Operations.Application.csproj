@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Observability/Mbb.Archive.BuildingBlocks.Observability.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Operations.Domain/Mbb.Archive.Modules.Operations.Domain.csproj" />
+  </ItemGroup>
+</Project>

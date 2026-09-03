@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mbb.Archive.Modules.Search.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="RabbitMQ.Client" />
+    <PackageReference Include="AWSSDK.S3" />
+
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Domain/Mbb.Archive.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq.csproj" />
+    <ProjectReference Include="../../Classification/Mbb.Archive.Modules.Classification.Contracts/Mbb.Archive.Modules.Classification.Contracts.csproj" />
+    <ProjectReference Include="../../Documents/Mbb.Archive.Modules.Documents.Contracts/Mbb.Archive.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="../../Processing/Mbb.Archive.Modules.Processing.Contracts/Mbb.Archive.Modules.Processing.Contracts.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Search.Application/Mbb.Archive.Modules.Search.Application.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Search.Contracts/Mbb.Archive.Modules.Search.Contracts.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Search.Domain/Mbb.Archive.Modules.Search.Domain.csproj" />
+      <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Observability/Mbb.Archive.BuildingBlocks.Observability.csproj" />
+  </ItemGroup>
+</Project>

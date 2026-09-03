@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Domain/Mbb.Archive.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../Classification/Mbb.Archive.Modules.Classification.Contracts/Mbb.Archive.Modules.Classification.Contracts.csproj" />
+    <ProjectReference Include="../../Documents/Mbb.Archive.Modules.Documents.Contracts/Mbb.Archive.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="../../Processing/Mbb.Archive.Modules.Processing.Contracts/Mbb.Archive.Modules.Processing.Contracts.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Search.Contracts/Mbb.Archive.Modules.Search.Contracts.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Search.Domain/Mbb.Archive.Modules.Search.Domain.csproj" />
+  </ItemGroup>
+</Project>

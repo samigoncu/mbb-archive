@@ -1,0 +1,28 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+node_modules/
+.next/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.user
+*.suo
+.DS_Store
+artifacts/
+
+# Yerel geliştirme verisi: yüklenen belgelerin orijinalleri, OCR çıktıları,
+# hazırlık alanı ve servis logları. Gerçek belge içeriği barındırır, asla
+# depoya girmez.
+.local-data/
+
+# uipro ile kurulan yerel AI skill dosyaları (tekrarlanan kurulumlar birden
+# fazla kopya bırakıyor). Proje kaynağı değildir.
+**/.claude/skills/
+**/.codex/skills/
