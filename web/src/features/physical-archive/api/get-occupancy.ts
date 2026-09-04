@@ -13,8 +13,12 @@ export type LocationOccupancyItem = {
 };
 
 export async function getLocationOccupancy(): Promise<LocationOccupancyItem[]> {
-  return apiGet<LocationOccupancyItem[]>(
-    "/physical-archive/locations/occupancy",
-    { cache: "no-store" },
-  );
+  try {
+    return await apiGet<LocationOccupancyItem[]>(
+      "/physical-archive/locations/occupancy",
+      { cache: "no-store" },
+    );
+  } catch {
+    return [];
+  }
 }

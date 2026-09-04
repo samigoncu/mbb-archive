@@ -4,9 +4,8 @@ import { JetBrains_Mono, Lexend, Source_Sans_3 } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
+import { getCurrentUser } from "@/features/access/api/get-current-user";
 
-// Corporate Trust eşleşmesi: Lexend okunabilirlik için tasarlandı ve başlıkları
-// taşır, Source Sans 3 yoğun gövde metnini, JetBrains Mono barkod/kimlik alanlarını.
 const heading = Lexend({
   subsets: ["latin", "latin-ext"],
   variable: "--font-heading",
@@ -30,7 +29,9 @@ export const metadata = {
   description: "Kurumsal Belge, Arşiv ve Dijital Hafıza Platformu",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const user = await getCurrentUser();
+
   return (
     <html
       lang="tr"
@@ -42,7 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       )}
     >
       <body>
-        <AppShell>{children}</AppShell>
+        <AppShell user={user}>{children}</AppShell>
         <Toaster />
       </body>
     </html>

@@ -36,6 +36,16 @@ export async function apiPost<TRequest, TResponse>(
   });
 }
 
+export async function apiDelete<TResponse = void>(
+  path: string,
+  init?: RequestInit,
+): Promise<TResponse> {
+  return apiRequest<TResponse>(path, {
+    ...init,
+    method: "DELETE",
+  });
+}
+
 export function getPublicApiBaseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_API_BASE_URL ??

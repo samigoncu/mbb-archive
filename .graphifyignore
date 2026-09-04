@@ -1,0 +1,13 @@
+# Graphify tarama dışı bırakılanlar.
+#
+# .agents/skills ve .claude/skills: uipro ile kurulan üçüncü taraf AI skill
+# verisi (113 doküman + 35 betik). Proje kaynağı değil; grafiği kirletir ve
+# semantik çıkarımda gereksiz maliyet yaratır.
+.agents/skills/
+.claude/skills/
+.codex/skills/
+
+# Üretilen/geçici içerik.
+.local-data/
+graphify-out/
+artifacts/

@@ -31,3 +31,6 @@ artifacts/
 __pycache__/
 *.py[cod]
 *.tsbuildinfo
+
+# Graphify tarafından üretilen kod grafiği (yeniden üretilebilir).
+graphify-out/

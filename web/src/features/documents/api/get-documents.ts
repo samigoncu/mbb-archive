@@ -8,13 +8,22 @@ export async function getDocuments(
   page = 1,
   pageSize = 25,
 ): Promise<PagedResult<DocumentListItem>> {
-  const params = new URLSearchParams({
-    page: String(page),
-    pageSize: String(pageSize),
-  });
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
 
-  return apiGet<PagedResult<DocumentListItem>>(
-    `/documents?${params.toString()}`,
-    { cache: "no-store" },
-  );
+    return await apiGet<PagedResult<DocumentListItem>>(
+      `/documents?${params.toString()}`,
+      { cache: "no-store" },
+    );
+  } catch {
+    return {
+      items: [],
+      totalCount: 0,
+      page,
+      pageSize,
+    };
+  }
 }

@@ -1,16 +1,11 @@
 import { apiGet } from "@/lib/api/api-client";
 import type { PagedResult } from "@/features/documents/model/document";
-import type {
-  LoanDetailsItem,
-  LoanFilters,
-} from "@/features/loans/model/loan";
-
-export const loanPageSize = 25;
+import type { LoanDetailsItem, LoanFilters } from "@/features/loans/model/loan";
 
 export async function getLoans(
-  page: number,
-  filters: LoanFilters,
-  pageSize = loanPageSize,
+  page = 1,
+  filters: LoanFilters = {},
+  pageSize = 50,
 ): Promise<PagedResult<LoanDetailsItem>> {
   const params = new URLSearchParams({
     page: String(page),
@@ -21,22 +16,31 @@ export async function getLoans(
     params.set("status", filters.status);
   }
 
-  if (filters.borrowerSubjectId) {
-    params.set("borrowerSubjectId", filters.borrowerSubjectId);
-  }
-
   if (filters.overdueOnly) {
     params.set("overdueOnly", "true");
+  }
+
+  if (filters.borrowerSubjectId) {
+    params.set("borrowerSubjectId", filters.borrowerSubjectId);
   }
 
   if (filters.dueInDays !== undefined) {
     params.set("dueInDays", String(filters.dueInDays));
   }
 
-  return apiGet<PagedResult<LoanDetailsItem>>(
-    `/physical-archive/loans?${params.toString()}`,
-    { cache: "no-store" },
-  );
+  try {
+    return await apiGet<PagedResult<LoanDetailsItem>>(
+      `/physical-archive/loans?${params.toString()}`,
+      { cache: "no-store" },
+    );
+  } catch {
+    return {
+      items: [],
+      totalCount: 0,
+      page,
+      pageSize,
+    };
+  }
 }
 
 /** Özet kartları için yalnızca toplam sayı gerekir; tek kayıt çekmek yeterli. */

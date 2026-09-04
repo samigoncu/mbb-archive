@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Archive, Boxes, Layers, Percent } from "lucide-react";
 import { StatTile } from "@/features/dashboard/components/stat-tile";
 import { getLocationOccupancy } from "@/features/physical-archive/api/get-occupancy";
@@ -27,6 +28,28 @@ export default async function ArsivYerlesimiPage() {
         title="Arşiv Yerleşimi"
         description="Depo hiyerarşisi, raf kapasiteleri ve doluluk oranları."
       />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-sky-600 p-2.5 text-white">
+            <Boxes className="size-6" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-foreground">
+              Görsel 2D/3D Arşiv Simülatörü & Raylı Dolap Modelleme
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Kompakt raylı dolapları hareket ettirin, dikey rafları ve Haritada Gör (CBS) mekansal kadastro eşleşmesini inceleyin.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/arsiv-simulatoru"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors"
+        >
+          <span>Simülatörü Başlat →</span>
+        </Link>
+      </div>
 
       <section aria-label="Kapasite özeti" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile

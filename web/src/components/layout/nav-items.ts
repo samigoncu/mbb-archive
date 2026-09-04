@@ -1,7 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Archive,
+  ArrowLeftRight,
+  BarChart3,
   BookMarked,
+  Boxes,
+  Building2,
+  Calendar,
   FileStack,
   FolderTree,
   Gauge,
@@ -9,14 +14,11 @@ import {
   LayoutDashboard,
   ScanLine,
   Search,
+  Settings,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 
-/**
- * Menü kalemi. `permission` auth açıldığında (Faz 9) görünürlük kararı için
- * kullanılacak; şimdilik tüm kalemler görünür.
-
- */
 export type NavItem = {
   href: string;
   label: string;
@@ -27,15 +29,17 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { href: "/", label: "Ana Sayfa", icon: LayoutDashboard, status: "ready" },
-  { href: "/tanimlamalar", label: "Tanımlamalar (SDP)", icon: FolderTree, status: "ready", permission: "classification.read" },
-  { href: "/dosya-islemleri", label: "Dosya İşlemleri", icon: FileStack, status: "ready", permission: "physical-archive.read" },
-  { href: "/arsiv-yerlesimi", label: "Arşiv Yerleşimi", icon: Archive, status: "ready", permission: "physical-archive.read" },
-  { href: "/documents", label: "Belgeler & İnceleme", icon: BookMarked, status: "ready", permission: "documents.read" },
-  { href: "/tarama", label: "Tarama ve İndeksleme", icon: ScanLine, status: "ready", permission: "scanning.write" },
-  { href: "/odunc", label: "Ödünç Sistemi", icon: HandCoins, status: "ready", permission: "physical-archive.loan" },
-  { href: "/arama", label: "Akıllı OCR Arama", icon: Search, status: "ready", permission: "search.read" },
-  { href: "/devir-imha", label: "Devir ve İmha", icon: Trash2, status: "ready", permission: "retention.write" },
-  { href: "/operations", label: "Operasyon Merkezi", icon: Gauge, status: "ready", permission: "operations.read" },
+  { href: "/tanimlamalar", label: "Tanımlamalar", icon: FolderTree, status: "ready" },
+  { href: "/dosya-islemleri", label: "Dosya İşlemleri", icon: FileStack, status: "ready" },
+  { href: "/tarama", label: "Tarama ve İndeksleme", icon: ScanLine, status: "ready" },
+  { href: "/odunc", label: "Ödünç Sistemi", icon: HandCoins, status: "ready" },
+  { href: "/arama", label: "Arama (OCR)", icon: Search, status: "ready" },
+  { href: "/documents", label: "Belgeler & İnceleme", icon: BookMarked, status: "ready" },
+  { href: "/arsiv-simulatoru", label: "Arşiv Simülatörü", icon: Boxes, status: "ready" },
+  { href: "/arsiv-yerlesimi", label: "Arşiv Yerleşimi", icon: Archive, status: "ready" },
+  { href: "/devir-imha", label: "Devir ve İmha", icon: Trash2, status: "ready" },
+  { href: "/operations", label: "Servis Büro & Kalite", icon: ShieldCheck, status: "ready" },
+  { href: "/ayarlar", label: "Ayarlar", icon: Settings, status: "ready" },
 ];
 
 export function findNavItem(pathname: string): NavItem | undefined {
