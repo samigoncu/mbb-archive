@@ -365,16 +365,6 @@ export function ExecutiveDashboardView({
           </div>
         </div>
       </div>
-          {/* MBB Arşiv Mesai Duyuru Şeridi (Screenshot 2 Paritesi) */}
-      <div className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground leading-relaxed shadow-2xs">
-        <p className="font-bold text-foreground mb-1 uppercase tracking-wider text-[11px]">
-          DEĞERLİ MESAİ ARKADAŞIMIZ,
-        </p>
-        <p>
-          Yaz dönemi çalışma saatleri <strong>08.30 - 17.30</strong> olarak değiştirilmiştir. 21 Eylül 2024 tarihine kadar mesai saatleri bu saatler arası uygulanacaktır. Gerekli hassasiyetin gösterilmesini rica eder, çalışmalarınızda başarılar dileriz.
-        </p>
-      </div>
-
     </div>
   );
 }

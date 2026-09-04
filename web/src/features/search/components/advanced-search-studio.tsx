@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
-  MessageSquare, Mail, History, Paperclip, Send, 
   Building2,
   Check,
   ChevronDown,
@@ -19,19 +18,25 @@ import {
   FolderOpen,
   Globe,
   HardDrive,
+  History,
   Layers,
+  Mail,
   MapPin,
   Maximize2,
+  MessageSquare,
   Minimize2,
+  Paperclip,
   Printer,
   QrCode,
   RotateCw,
   Search,
+  Send,
   Share2,
+  ShieldCheck,
   Tag,
+  X,
   ZoomIn,
   ZoomOut,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";

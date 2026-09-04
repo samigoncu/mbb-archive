@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowLeftRight,
+  ArrowRight,
   Bell,
   CheckCircle2,
   Clock,
@@ -13,10 +15,13 @@ import {
   FileStack,
   HandCoins,
   History,
+  MapPin,
   Printer,
   Search,
   Send,
   ShieldCheck,
+  User,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -25,14 +30,124 @@ import { CheckoutLoanWizard } from "./checkout-loan-wizard";
 import { InspectionReturnDialog } from "./inspection-return-dialog";
 import { ExtendLoanDialog } from "./extend-loan-dialog";
 import { LoanReceiptModal } from "./loan-receipt-modal";
-import type { LoanDetailsItem } from "@/features/loans/model/loan";
+import { TransferCustodyDialog } from "./transfer-custody-dialog";
+import { CustodyChainDialog } from "./custody-chain-dialog";
+import type { CustodyTransferRecord, LoanDetailsItem } from "@/features/loans/model/loan";
+import type { FolderListItem } from "@/features/physical-archive/model/folder";
+
+const DEFAULT_DEMO_LOANS: LoanDetailsItem[] = [
+  {
+    id: "loan-101",
+    folderId: "folder-1",
+    folderBarcode: "KLASOR-2024-0012",
+    folderTitle: "Malatya Trambüs Güzergahı Genişletme Projesi İhale ve Hakediş Dosyası",
+    filePlanCode: "040.03/782",
+    borrowerSubjectId: "Ahmet YILMAZ (Ulaşım Planlama Şb.)",
+    currentHolder: "Veyis AYDEMİR (1. Hukuk Müşavirliği)",
+    currentLocation: "Hukuk Müşavirliği Kat: 3 Oda: 308",
+    custodyChain: [
+      {
+        id: "chain-1",
+        fromUser: "Ahmet YILMAZ (Ulaşım Planlama Şb.)",
+        toUser: "Veyis AYDEMİR (1. Hukuk Müşavirliği)",
+        transferredAt: new Date(Date.now() - 4 * 86400000).toISOString(),
+        reason: "Duruşma hazırlığı ve ortak hukuki savunma mütalaası için dosya devredilmiştir.",
+        location: "Hukuk Müşavirliği Kat: 3 Oda: 308",
+        officialDocNo: "E-94285142-640-1092",
+      },
+    ],
+    purpose: "Mahkeme ve Dava Savunması: İdari Mahkeme 2024/418E sayılı dosya",
+    status: "Active",
+    checkedOutAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+    dueAt: new Date(Date.now() + 8 * 86400000).toISOString(),
+    returnedAt: null,
+    isOverdue: false,
+    daysOverdue: 0,
+  },
+  {
+    id: "loan-102",
+    folderId: "folder-2",
+    folderBarcode: "KLASOR-2024-0045",
+    folderTitle: "Yeşilyurt Bölgesi İmar Planı Revizyonu ve Parselasyon Dosyaları",
+    filePlanCode: "115.01.02/104",
+    borrowerSubjectId: "Mehmet KAYA (İmar ve Şehircilik Dairesi)",
+    currentHolder: "Fatma ŞAHİN (Harita ve CBS Şb.)",
+    currentLocation: "Harita Şb. Kat: 2 Oda: 215",
+    custodyChain: [
+      {
+        id: "chain-2",
+        fromUser: "Mehmet KAYA (İmar ve Şehircilik Dairesi)",
+        toUser: "Ali ÇELİK (Fen İşleri Dairesi)",
+        transferredAt: new Date(Date.now() - 6 * 86400000).toISOString(),
+        reason: "Yol kotu ve altyapı çakışma tespiti için inceleme devri",
+        location: "Fen İşleri Kat: 1 Oda: 102",
+      },
+      {
+        id: "chain-3",
+        fromUser: "Ali ÇELİK (Fen İşleri Dairesi)",
+        toUser: "Fatma ŞAHİN (Harita ve CBS Şb.)",
+        transferredAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+        reason: "Kamulaştırma ve mülkiyet sınır haritası aplikasyonu için zincirleme devir",
+        location: "Harita Şb. Kat: 2 Oda: 215",
+        officialDocNo: "E-812039-601/44",
+      },
+    ],
+    purpose: "Birim İçi Teknik Proje Çalışması: Parselasyon ve yol düzenlemesi",
+    status: "Active",
+    checkedOutAt: new Date(Date.now() - 15 * 86400000).toISOString(),
+    dueAt: new Date(Date.now() + 5 * 86400000).toISOString(),
+    returnedAt: null,
+    isOverdue: false,
+    daysOverdue: 0,
+  },
+  {
+    id: "loan-103",
+    folderId: "folder-3",
+    folderBarcode: "KLASOR-2024-0089",
+    folderTitle: "Büyükşehir Hizmet Binası Güçlendirme ve Yapım Sözleşmesi",
+    filePlanCode: "750.01/45",
+    borrowerSubjectId: "Zeynep DEMİR (Fen İşleri Dairesi)",
+    currentHolder: "Zeynep DEMİR (Fen İşleri Dairesi)",
+    currentLocation: "Fen İşleri Binası Kat: 2 Oda: 204",
+    custodyChain: [],
+    purpose: "Sayıştay / Teftiş Denetimi: 2024 Hakediş ve kabul tutanakları",
+    status: "Active",
+    checkedOutAt: new Date(Date.now() - 25 * 86400000).toISOString(),
+    dueAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+    returnedAt: null,
+    isOverdue: true,
+    daysOverdue: 3,
+  },
+  {
+    id: "loan-104",
+    folderId: "folder-4",
+    folderBarcode: "KLASOR-2023-0190",
+    folderTitle: "2023 Mali Yılı Sayıştay İnceleme ve Denetim Dosyası",
+    filePlanCode: "840.02/12",
+    borrowerSubjectId: "Mustafa ŞEN (Mali Hizmetler Dairesi)",
+    currentHolder: "Mustafa ŞEN (Mali Hizmetler Dairesi)",
+    currentLocation: "Arşiv Rafı B-04-2",
+    custodyChain: [],
+    purpose: "Sayıştay İncelemesi: Kesin hesap raporu",
+    status: "Returned",
+    checkedOutAt: new Date(Date.now() - 60 * 86400000).toISOString(),
+    dueAt: new Date(Date.now() - 40 * 86400000).toISOString(),
+    returnedAt: new Date(Date.now() - 41 * 86400000).toISOString(),
+    isOverdue: false,
+    daysOverdue: 0,
+  },
+];
 
 export function LoanProcessManager({
   initialLoans,
+  availableFolders = [],
 }: {
   initialLoans: LoanDetailsItem[];
+  availableFolders?: FolderListItem[];
 }) {
-  const [loans, setLoans] = useState<LoanDetailsItem[]>(initialLoans);
+  const [loans, setLoans] = useState<LoanDetailsItem[]>(
+    initialLoans && initialLoans.length > 0 ? initialLoans : DEFAULT_DEMO_LOANS
+  );
   const [activeTab, setActiveTab] = useState<"all" | "active" | "overdue" | "returned">("active");
   const [search, setSearch] = useState("");
   const [receiptLoan, setReceiptLoan] = useState<LoanDetailsItem | null>(null);
@@ -51,6 +166,7 @@ export function LoanProcessManager({
           l.folderBarcode.toLowerCase().includes(q) ||
           l.folderTitle.toLowerCase().includes(q) ||
           l.borrowerSubjectId.toLowerCase().includes(q) ||
+          (l.currentHolder && l.currentHolder.toLowerCase().includes(q)) ||
           l.purpose.toLowerCase().includes(q)
       );
     }
@@ -97,8 +213,30 @@ export function LoanProcessManager({
     );
   }
 
+  function handleCustodyTransferred(
+    loanId: string,
+    record: CustodyTransferRecord,
+    newHolder: string,
+    newLocation: string,
+    newDueAt?: string
+  ) {
+    setLoans((prev) =>
+      prev.map((l) => {
+        if (l.id !== loanId) return l;
+        return {
+          ...l,
+          currentHolder: newHolder,
+          currentLocation: newLocation,
+          dueAt: newDueAt || l.dueAt,
+          custodyChain: [...(l.custodyChain || []), record],
+        };
+      })
+    );
+  }
+
   function handleSendNotice(loan: LoanDetailsItem) {
-    toast.success(`'${loan.borrowerSubjectId}' personeline resmi iade ihtar bildirimi gönderildi.`);
+    const target = loan.currentHolder || loan.borrowerSubjectId;
+    toast.success(`'${target}' personeline resmi iade ihtar bildirimi gönderildi.`);
   }
 
   return (
@@ -195,7 +333,7 @@ export function LoanProcessManager({
             />
           </div>
 
-          <CheckoutLoanWizard onLoanCreated={handleLoanCreated} />
+          <CheckoutLoanWizard availableFolders={availableFolders} onLoanCreated={handleLoanCreated} />
         </div>
       </div>
 
@@ -206,7 +344,7 @@ export function LoanProcessManager({
             <thead className="border-b border-border bg-muted/40 font-bold uppercase text-[10px] text-muted-foreground tracking-wider">
               <tr>
                 <th className="p-3">Dosya Bilgisi & Barkod</th>
-                <th className="p-3">Teslim Alan Personel</th>
+                <th className="p-3">Zimmet Sahibi (İlk / En Son Kimde & Nerede)</th>
                 <th className="p-3">Talep Gerekçesi</th>
                 <th className="p-3">Veriliş Tarihi</th>
                 <th className="p-3">Son İade Tarihi & Durum</th>
@@ -234,7 +372,46 @@ export function LoanProcessManager({
                   </td>
 
                   <td className="p-3">
-                    <span className="font-bold text-foreground block">{loan.borrowerSubjectId}</span>
+                    <div className="flex flex-col gap-1 max-w-xs">
+                      <div className="flex items-center gap-1.5">
+                        <User className="size-3 text-muted-foreground shrink-0" />
+                        <span className="font-medium text-foreground text-xs">
+                          {loan.borrowerSubjectId}
+                        </span>
+                        {loan.custodyChain && loan.custodyChain.length > 0 && (
+                          <span className="text-[9px] text-muted-foreground">(İlk Alan)</span>
+                        )}
+                      </div>
+
+                      {loan.currentHolder && loan.currentHolder !== loan.borrowerSubjectId ? (
+                        <div className="flex flex-col gap-0.5 rounded-lg border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/70 dark:bg-indigo-950/40 p-1.5 mt-0.5 shadow-2xs">
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                            <ArrowRight className="size-3 text-indigo-500 shrink-0" />
+                            <span>En Son Kimde: {loan.currentHolder}</span>
+                          </div>
+                          {loan.currentLocation && (
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground pl-4">
+                              <MapPin className="size-2.5 text-amber-600 shrink-0" />
+                              <span className="truncate">{loan.currentLocation}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {loan.custodyChain && loan.custodyChain.length > 0 && (
+                        <CustodyChainDialog
+                          loan={loan}
+                          trigger={
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline w-fit mt-0.5"
+                            >
+                              <span>⛓️ {loan.custodyChain.length} Kez Devredildi (Zincirleme Zimmet)</span>
+                            </button>
+                          }
+                        />
+                      )}
+                    </div>
                   </td>
 
                   <td className="p-3 max-w-xs">
@@ -283,8 +460,19 @@ export function LoanProcessManager({
                         <Printer className="size-3.5" />
                       </Button>
 
+                      {/* Zincirleme Zimmet Geçmişi */}
+                      {loan.custodyChain && loan.custodyChain.length > 0 && (
+                        <CustodyChainDialog loan={loan} />
+                      )}
+
                       {loan.status !== "Returned" ? (
                         <>
+                          {/* Zimmet Devret (Kurum İçi Zincirleme Devir) */}
+                          <TransferCustodyDialog
+                            loan={loan}
+                            onTransferred={handleCustodyTransferred}
+                          />
+
                           {/* Süre Uzat */}
                           <ExtendLoanDialog loan={loan} onExtended={handleExtended} />
 

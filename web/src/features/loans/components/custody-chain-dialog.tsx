@@ -27,7 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { LoanDetailsItem } from "@/features/loans/model/loan";
+import type { CustodyTransferRecord, LoanDetailsItem } from "@/features/loans/model/loan";
 
 export function CustodyChainDialog({
   loan,
@@ -160,7 +160,7 @@ export function CustodyChainDialog({
               </div>
 
               {/* Devir Adımları */}
-              {chain.map((record, index) => (
+              {chain.map((record: CustodyTransferRecord, index: number) => (
                 <div key={record.id} className="relative">
                   <div className="absolute -left-[31px] top-0 flex size-5 items-center justify-center rounded-full bg-indigo-600 text-white text-[10px] font-bold">
                     {index + 2}
