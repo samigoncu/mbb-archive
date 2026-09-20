@@ -4,5 +4,7 @@
     <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Domain/Mbb.Archive.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="../Mbb.Archive.Modules.PhysicalArchive.Contracts/Mbb.Archive.Modules.PhysicalArchive.Contracts.csproj" />
     <ProjectReference Include="../Mbb.Archive.Modules.PhysicalArchive.Domain/Mbb.Archive.Modules.PhysicalArchive.Domain.csproj" />
+    <ProjectReference Include="../../Documents/Mbb.Archive.Modules.Documents.Contracts/Mbb.Archive.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="../../Classification/Mbb.Archive.Modules.Classification.Contracts/Mbb.Archive.Modules.Classification.Contracts.csproj" />
   </ItemGroup>
 </Project>

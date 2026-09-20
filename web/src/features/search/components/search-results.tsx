@@ -1,17 +1,20 @@
 import Link from "next/link";
-import { FileText, Layers } from "lucide-react";
+import { ArrowUpRight, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { HighlightedText } from "@/features/search/components/highlighted-text";
+import { MapPin } from "lucide-react";
+import { geoRelationTypeLabels } from "@/features/geo/model/geo";
 import { mimeTypeLabel, type SearchHit } from "@/features/search/model/search";
+import { formatSearchDate } from "../model/search-dates";
 
 export function SearchResults({ hits }: { hits: SearchHit[] }) {
   return (
     <ol className="flex flex-col gap-3">
       {hits.map((hit) => (
         <li key={hit.documentId}>
-          <article className="rounded-lg border border-border bg-card p-4">
+          <article className="rounded-xl border border-border bg-card p-5 shadow-flat">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="text-base font-semibold">
+              <h3 className="min-w-0 break-words text-base font-semibold leading-7">
                 <Link
                   href={`/documents/${hit.documentId}`}
                   className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -24,14 +27,43 @@ export function SearchResults({ hits }: { hits: SearchHit[] }) {
               ) : null}
             </div>
 
+            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span>Kayıt: {formatSearchDate(hit.createdAt)}</span>
+              <span>Yüklenme: {formatSearchDate(hit.ingestedAt)}</span>
+            </p>
             {hit.fragments.length > 0 ? (
-              <div className="mt-2 flex flex-col gap-1">
+              <div className="mt-4 flex flex-col gap-2 rounded-lg bg-muted/30 p-3">
                 {hit.fragments.map((fragment, index) => (
-                  <p key={index} className="text-sm leading-relaxed text-muted-foreground">
+                  <p
+                    key={index}
+                    className="text-sm leading-relaxed text-muted-foreground"
+                  >
                     <HighlightedText fragment={fragment} />
                   </p>
                 ))}
               </div>
+            ) : null}
+
+            {hit.geoMatches.length > 0 ? (
+              <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                <MapPin
+                  className="size-3.5 text-muted-foreground"
+                  aria-hidden
+                />
+                <span className="text-muted-foreground">Harita ilişkisi:</span>
+                {hit.geoMatches.map((match) => (
+                  <span
+                    key={`${match.name}-${match.relationType}`}
+                    className="rounded border border-border px-1.5 py-0.5"
+                  >
+                    {match.name}
+                    <span className="ml-1 text-muted-foreground">
+                      {geoRelationTypeLabels[match.relationType] ??
+                        match.relationType}
+                    </span>
+                  </span>
+                ))}
+              </p>
             ) : null}
 
             {hit.pages.length > 0 ? (
@@ -57,12 +89,7 @@ export function SearchResults({ hits }: { hits: SearchHit[] }) {
               </div>
             ) : null}
 
-            <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <FileText className="size-3.5" aria-hidden />
-              <span className="font-mono">{hit.documentId.slice(0, 8)}</span>
-              <span aria-hidden>·</span>
-              <span>skor {hit.score.toFixed(2)}</span>
-            </p>
+            <div className="mt-4 flex justify-end border-t border-border pt-3"><Link href={`/documents/${hit.documentId}`} className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-primary hover:underline">Belgeyi aç<ArrowUpRight className="size-4" aria-hidden /></Link></div>
           </article>
         </li>
       ))}

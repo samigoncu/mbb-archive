@@ -6,5 +6,6 @@ public enum DocumentStatus
     Processing = 1,
     QualityControl = 2,
     Active = 3,
-    Archived = 4
+    Archived = 4,
+    Cancelled = 5
 }

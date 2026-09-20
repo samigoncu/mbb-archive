@@ -12,5 +12,11 @@ internal sealed class ArchiveAuthenticationOptions
     // Development identity is intentionally explicit and is never used when
     // production JWT/OIDC authentication is enabled.
     public string DevelopmentSubject { get; init; } = "dev-admin";
-    public string[] DevelopmentRoles { get; init; } = ["Administrators"];
+    /// <summary>
+    /// Geliştirme kimliğine verilecek roller. Varsayılan bilinçli olarak
+    /// boştur: buraya kodda bir değer konursa yapılandırma binder'ı diziye
+    /// <em>ekleme</em> yapar ve rol yapılandırmadan kaldırılamaz hâle gelir —
+    /// yani bootstrap istisnası kapatılamaz. Gerçek değer appsettings'ten gelir.
+    /// </summary>
+    public string[] DevelopmentRoles { get; init; } = [];
 }

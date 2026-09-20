@@ -1,14 +1,21 @@
 "use server";
 
+import { isOfficeFile } from "@/features/documents/model/office-formats";
+
+import { getScanContext } from "./get-scan-context";
+import { validateScanSelection } from "../model/scan-context";
 import { revalidatePath } from "next/cache";
 import {
   ApiError,
   apiPost,
+  apiPut,
   getServerApiBaseUrl,
+  authorizationHeader,
 } from "@/lib/api/api-client";
 import type { ActionState } from "@/features/physical-archive/api/folder-actions";
 
-const maxUploadBytes = 200 * 1024 * 1024;
+import { getUploadPolicy } from "@/features/settings/api/upload-policy";
+import { maxUploadBytes, uploadSizeError } from "../model/upload-size";
 
 export type StageResponse = {
   ingestionId: string;
@@ -18,11 +25,12 @@ export type StageResponse = {
   sizeBytes: number;
 };
 
-export type UploadActionResult = {
+export type UploadScanResult = {
   success: boolean;
   message: string;
   documentId?: string;
-  stageInfo?: StageResponse;
+  /** Belge kaydedildi ama klasör bağlama / sınıflandırma tamamlanamadı. */
+  warnings?: string[];
 };
 
 /**
@@ -36,7 +44,7 @@ export async function uploadDocumentAction(
   const file = formData.get("file");
   const title = String(formData.get("title") ?? "").trim();
 
-  if (!(file instanceof File) || file.size === 0) {
+  if (!file || typeof file === "string" || file.size === 0) {
     return { status: "error", message: "Bir dosya seçmelisiniz." };
   }
 
@@ -45,12 +53,15 @@ export async function uploadDocumentAction(
   }
 
   try {
-    const document = await apiPost<{ title: string }, { id: string }>("/documents", {
+    const document = await apiPost<{ title: string; ownerUnitId: string | null; dossierId: string | null }, { id: string }>("/documents", {
+      ownerUnitId: String(formData.get("ownerUnitId") || "") || null,
+      dossierId: String(formData.get("dossierId") || "") || null,
       title: title || file.name,
     });
 
     const staged = await stageFile(document.id, file);
 
+    revalidatePath("/islem-takibi");
     revalidatePath("/tarama");
     revalidatePath("/documents");
 
@@ -67,83 +78,181 @@ export async function uploadDocumentAction(
 }
 
 /**
- * Tarama ve İndeksleme stüdyosundan gelen gerçek evrakı yükler,
- * fiziksel klasör ve standart dosya planı ile ilişkilendirir.
+ * Tarama stüdyosundan gelen sayfaları tek bir belge olarak sisteme alır:
+ * belge kaydı açılır, her sayfa hazırlık alanına yüklenir, istenirse fiziksel
+ * klasöre bağlanır ve dosya planına göre sınıflandırılır. Bağlama ve
+ * sınıflandırma hataları yutulmaz; uyarı olarak geri döner.
  */
-export async function uploadScannedDocumentAction(
+export async function uploadScannedDocumentAction(formData: FormData): Promise<UploadScanResult> {
+  const files = formData.getAll("files").filter((entry): entry is File => typeof entry !== "string" && entry.size > 0);
+  const prepared = await prepareScannedDocumentAction(formData, files.map(file => ({ name: file.name, type: file.type, size: file.size })));
+  if (!prepared.success || !prepared.documentId) return prepared;
+  try { for (const file of files) await stageFile(prepared.documentId, file); }
+  catch (error) { return { success: false, documentId: prepared.documentId, message: toMessage(error, "Dosya yüklenemedi; belge kaydı eksik kaldı.") }; }
+  return completeScannedDocumentAction(prepared.documentId, formData);
+}
+
+export async function prepareScannedDocumentAction(
   formData: FormData,
-): Promise<UploadActionResult> {
-  const file = formData.get("file");
+  files: { name: string; type: string; size: number }[],
+): Promise<UploadScanResult> {
   const title = String(formData.get("title") ?? "").trim();
   const folderId = String(formData.get("folderId") ?? "").trim();
-  const sdpCode = String(formData.get("sdpCode") ?? "").trim();
+  const filePlanId = String(formData.get("filePlanId") ?? "").trim();
+  const filePlanItemId = String(formData.get("filePlanItemId") ?? "").trim();
+  const metadataSchemaId = String(formData.get("metadataSchemaId") ?? "").trim();
+  const metadataValues = readMetadataValues(formData);
 
-  if (!(file instanceof File) || file.size === 0) {
-    return { success: false, message: "Geçerli bir taranmış dosya seçilmelidir." };
+  if (files.length === 0) {
+    return { success: false, message: "En az bir dosya gereklidir." };
   }
 
-  if (file.size > maxUploadBytes) {
-    return { success: false, message: "Dosya boyutu 200 MB sınırını aşıyor." };
+  if (!title) {
+    return { success: false, message: "Evrak konusu zorunludur." };
+  }
+
+  let limit: number;
+  try { limit = (await getUploadPolicy()).maxUploadBytes; }
+  catch { return { success: false, message: "Yükleme sınırı alınamadı. Yeniden deneyin." }; }
+  if (files.some(file => !Number.isSafeInteger(file.size) || file.size <= 0)) return { success: false, message: "Dosya boyutu geçersiz." };
+  const sizeError = uploadSizeError(files, limit);
+  if (sizeError) return { success: false, message: sizeError };
+
+  const oversized = files.find((file) => file.size > limit);
+  if (files.length > 1 && files.some(isOfficeFile)) {
+    return { success: false, message: "Office belgelerini ayrı kayıtlar olarak tek tek yükleyin. Her belge için kendi PDF kopyası oluşturulur." };
+  }
+  if (oversized) {
+    return {
+      success: false,
+      message: `'${oversized.name}' yükleme sınırını aşıyor.`,
+    };
+  }
+
+  // Re-check membership and every submitted option before creating any document.
+  try {
+    const ownerUnitId = String(formData.get("ownerUnitId") || "");
+    if (!ownerUnitId) return { success: false, message: "Sahip birim seçilmelidir." };
+    const context = await getScanContext(ownerUnitId, false);
+    const invalid = validateScanSelection(context, { folderId, dossierId: String(formData.get("dossierId") || ""), filePlanId, filePlanItemId });
+    if (invalid) return { success: false, message: invalid };
+  } catch (error) { return { success: false, message: toMessage(error, "Birim ve dosya kapsamı doğrulanamadı.") }; }
+
+  let documentId: string;
+
+  try {
+    const document = await apiPost<{ title: string; ownerUnitId: string | null; dossierId: string | null }, { id: string }>("/documents", {
+      ownerUnitId: String(formData.get("ownerUnitId") || "") || null,
+      dossierId: String(formData.get("dossierId") || "") || null,
+      title,
+    });
+    documentId = document.id;
+  } catch (error) {
+    return { success: false, message: toMessage(error, "Belge kaydı oluşturulamadı.") };
+  }
+
+  return { success: true, documentId, message: "Belge kaydı oluşturuldu." };
+}
+
+export async function completeScannedDocumentAction(documentId: string, formData: FormData): Promise<UploadScanResult> {
+  const title = String(formData.get("title") ?? "").trim();
+  const folderId = String(formData.get("folderId") ?? "").trim();
+  const filePlanId = String(formData.get("filePlanId") ?? "").trim();
+  const filePlanItemId = String(formData.get("filePlanItemId") ?? "").trim();
+  const metadataSchemaId = String(formData.get("metadataSchemaId") ?? "").trim();
+  const metadataValues = readMetadataValues(formData);
+
+  const warnings: string[] = [];
+
+  if (folderId) {
+    try {
+      await apiPost(`/physical-archive/folders/${folderId}/documents`, {
+        documentId,
+      });
+    } catch (error) {
+      warnings.push(toMessage(error, "Arşiv klasörüne bağlanamadı."));
+    }
+  }
+
+  if (filePlanId && filePlanItemId) {
+    try {
+      await apiPost(`/classification/documents/${documentId}/classifications`, {
+        filePlanId,
+        filePlanItemId,
+        isPrimary: true,
+      });
+    } catch (error) {
+      warnings.push(toMessage(error, "Dosya planına göre sınıflandırılamadı."));
+    }
+  }
+
+  if (metadataSchemaId && metadataValues !== null) {
+    try {
+      await apiPut(
+        `/classification/documents/${documentId}/metadata/${metadataSchemaId}`,
+        metadataValues,
+      );
+    } catch (error) {
+      warnings.push(toMessage(error, "Evrak üstverisi kaydedilemedi."));
+    }
+  }
+
+  revalidatePath("/islem-takibi");
+  revalidatePath("/tarama");
+  revalidatePath("/documents");
+
+  return {
+    success: true,
+    documentId,
+    warnings,
+    message: "Dosyalar güvenlik taraması kuyruğuna alındı.",
+  };
+}
+
+function toMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError ? error.message : fallback;
+}
+
+/**
+ * Üstveri değerleri istemcide şemaya göre tiplenip JSON olarak taşınır; burada
+ * yalnız çözümlenir. Biçim bozuksa üstveri gönderilmez, yükleme sürer.
+ */
+function readMetadataValues(
+  formData: FormData,
+): Record<string, unknown> | null {
+  const raw = String(formData.get("metadataValues") ?? "").trim();
+
+  if (!raw) {
+    return null;
   }
 
   try {
-    const document = await apiPost<{ title: string }, { id: string }>("/documents", {
-      title: title || file.name,
-    });
-
-    const staged = await stageFile(document.id, file);
-
-    // Eğer fiziksel klasör seçilmişse klasöre bağla
-    if (folderId && folderId !== "none" && !folderId.startsWith("f-")) {
-      try {
-        await apiPost(`/physical-archive/folders/${folderId}/documents`, {
-          documentId: document.id,
-        });
-      } catch {
-        // klasör bağlama hatası ana yüklemeyi engellemez
-      }
-    }
-
-    // Eğer SDP kodu verilmişse sınıflandırma yap
-    if (sdpCode) {
-      try {
-        await apiPost(`/classification/documents/${document.id}/classifications`, {
-          classificationCode: sdpCode,
-        });
-      } catch {
-        // sınıflandırma opsiyonel
-      }
-    }
-
-    revalidatePath("/tarama");
-    revalidatePath("/documents");
-
-    return {
-      success: true,
-      documentId: document.id,
-      message: `'${title || file.name}' başarıyla sisteme aktarıldı (${formatBytes(staged.sizeBytes)}). Güvenlik taraması ve OCR kuyruğuna alındı.`,
-      stageInfo: staged,
-    };
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
-    // Backend çevrimdışı veya hata verdiyse bile gerçekçi bir yerel kayıt ile devam ettir
-    const fallbackId = `doc-${Date.now().toString(36)}`;
-    return {
-      success: true,
-      documentId: fallbackId,
-      message: `'${title || file.name}' yerel stüdyoya ve hazırlık kuyruğuna kaydedildi (${formatBytes(file.size)}).`,
-    };
+    return null;
   }
 }
 
-async function stageFile(documentId: string, file: File): Promise<StageResponse> {
+async function stageFile(
+  documentId: string,
+  file: File,
+  reason?: string,
+): Promise<StageResponse> {
   const response = await fetch(
     `${getServerApiBaseUrl()}/documents/${documentId}/files`,
     {
       method: "POST",
       headers: {
         Accept: "application/json",
+        ...(await authorizationHeader()),
         "Content-Type": file.type || "application/octet-stream",
         "X-File-Name": encodeURIComponent(file.name),
+        ...(reason?.trim()
+          ? { "X-Version-Reason": encodeURIComponent(reason.trim()) }
+          : {}),
       },
       body: await file.arrayBuffer(),
     },

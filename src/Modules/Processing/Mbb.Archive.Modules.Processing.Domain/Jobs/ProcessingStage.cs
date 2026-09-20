@@ -9,5 +9,6 @@ public enum ProcessingStage
     AwaitingQualityControl = 4,
     Completed = 5,
     Failed = 6,
-    Unsupported = 7
+    Unsupported = 7,
+    TextExtractionRequested = 8
 }

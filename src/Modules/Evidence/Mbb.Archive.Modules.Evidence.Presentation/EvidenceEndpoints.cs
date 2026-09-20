@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Routing;
 using Mbb.Archive.BuildingBlocks.Application;
 using Mbb.Archive.BuildingBlocks.Presentation;
 using Mbb.Archive.Modules.Evidence.Application.Validations;
+using Mbb.Archive.Modules.Evidence.Application.Abstractions;
+using Microsoft.Extensions.Configuration;
 
 namespace Mbb.Archive.Modules.Evidence.Presentation;
 
@@ -31,14 +33,19 @@ public static class EvidenceEndpoints
         group.MapPost("/pdf/validate", ValidatePdf)
             .RequireAuthorization("permission:evidence.validate");
 
+        group.MapGet("/validations", GetValidations)
+            .RequireAuthorization("permission:evidence.read");
+
         group.MapGet("/validations/{id:guid}", GetValidation)
             .RequireAuthorization("permission:evidence.read");
 
-        group.MapGet("/capabilities", () => Results.Ok(new
+        group.MapGet("/capabilities", (IPdfSignatureValidator pdf, IConfiguration configuration) => Results.Ok(new
         {
             cms = ".NET SignedCms",
             rfc3161 = ".NET Rfc3161TimestampToken",
-            pdfPades = "provider-boundary; no compliance claim until configured",
+            pdfPades = pdf.IsConfigured ? "Kurum DSS doğrulama servisi" : "Kurum DSS sağlayıcısı yapılandırılmamış",
+            pdfPadesConfigured = pdf.IsConfigured,
+            timestampAuthorityConfigured = !string.IsNullOrWhiteSpace(configuration["Evidence:TimestampAuthority:Url"]),
             maxInlineDecodedBytes = MaxDecodedBytes
         }))
         .RequireAuthorization("permission:evidence.read");
@@ -127,6 +134,24 @@ public static class EvidenceEndpoints
 
         return FromResult(result);
     }
+
+    private static async Task<IResult> GetValidations(
+        int? page,
+        int? pageSize,
+        string? kind,
+        string? status,
+        Guid? documentId,
+        GetEvidenceValidationsQueryHandler handler,
+        CancellationToken ct)
+        => FromResult(
+            await handler.Handle(
+                new GetEvidenceValidationsQuery(
+                    page ?? 1,
+                    pageSize ?? 25,
+                    kind,
+                    status,
+                    documentId),
+                ct));
 
     private static async Task<IResult> GetValidation(
         Guid id,

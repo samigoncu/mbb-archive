@@ -1,0 +1,52 @@
+{
+  "backendTests": {
+    "passed": 191,
+    "failed": 0,
+    "skipped": 0
+  },
+  "frontendTests": {
+    "passed": 58
+  },
+  "browserVisualReview": "Unavailable: no CUA browser connection",
+  "checks": [
+    {
+      "route": "documents",
+      "status": 200,
+      "expected_control": true
+    },
+    {
+      "route": "dosya-islemleri",
+      "status": 200,
+      "expected_control": true
+    },
+    {
+      "route": "tarama",
+      "status": 200,
+      "expected_control": true
+    },
+    {
+      "route": "dosya-islemleri/{id}",
+      "status": 200,
+      "expected_control": true
+    },
+    {
+      "route": "/documents?ownerUnitId=BilgiIslem",
+      "status": 200,
+      "totalCount": 1
+    },
+    {
+      "route": "/documents/dossiers?ownerUnitId=BilgiIslem",
+      "status": 200,
+      "totalCount": 0
+    },
+    {
+      "route": "/physical-archive/folders?ownerUnitId=BilgiIslem",
+      "status": 200,
+      "totalCount": 0
+    },
+    {
+      "route": "POST /documents/dossiers invalid plan",
+      "status": 400
+    }
+  ]
+}

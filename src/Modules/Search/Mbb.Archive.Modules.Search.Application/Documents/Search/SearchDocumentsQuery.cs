@@ -10,4 +10,9 @@ public sealed record SearchDocumentsQuery(
     string? MimeType = null,
     string? FilePlanCode = null,
     string? MetadataKey = null,
-    string? MetadataValue = null) : IQuery<SearchResponse>;
+    string? MetadataValue = null,
+    IReadOnlyList<SearchCondition>? Conditions = null,
+    DateOnly? From = null,
+    DateOnly? To = null,
+    string DateField = "ingestedAt",
+    string Sort = "relevance") : IQuery<SearchResponse>;

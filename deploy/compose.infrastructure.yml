@@ -41,6 +41,12 @@ services:
     platform: linux/amd64
     container_name: mbb-archive-clamav
     restart: unless-stopped
+    environment:
+      CLAMD_CONF_StreamMaxLength: 2048M
+      CLAMD_CONF_MaxFileSize: 2048M
+      CLAMD_CONF_MaxScanSize: 2048M
+      CLAMD_CONF_MaxScanTime: 600000
+      CLAMD_CONF_AlertExceedsMax: "yes"
     ports:
       - "3310:3310"
     volumes:

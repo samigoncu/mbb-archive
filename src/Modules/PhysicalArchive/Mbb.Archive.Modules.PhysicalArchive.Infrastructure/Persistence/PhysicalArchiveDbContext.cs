@@ -25,6 +25,7 @@ public sealed class PhysicalArchiveDbContext :
     }
 
     internal DbSet<ArchiveLocation> Locations => Set<ArchiveLocation>();
+    internal DbSet<ArchiveLocationTypeDefinition> LocationTypes => Set<ArchiveLocationTypeDefinition>();
     internal DbSet<PhysicalFolder> Folders => Set<PhysicalFolder>();
     internal DbSet<PhysicalLoan> Loans => Set<PhysicalLoan>();
     internal DbSet<PhysicalArchiveOutboxMessage> OutboxMessages => Set<PhysicalArchiveOutboxMessage>();
@@ -48,7 +49,10 @@ public sealed class PhysicalArchiveDbContext :
                     integrationEvent.OccurredAt));
         }
 
-        var result = await base.SaveChangesAsync(cancellationToken);
+        int result;
+        try { result = await base.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateConcurrencyException exception)
+        { throw new ConcurrencyConflictException("Fiziksel klasör aynı anda değişmiş; güncel kaydı yükleyip tekrar deneyin.", exception); }
         _pendingEvents.Clear();
         return result;
     }

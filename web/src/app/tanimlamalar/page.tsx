@@ -4,7 +4,7 @@ import {
 } from "@/features/classification/api/get-classification";
 import { DefinitionsManagerView } from "@/features/classification/components/definitions-manager-view";
 
-export const metadata = { title: "Tanımlamalar · MBB Kurumsal Arşiv" };
+export const metadata = { title: "Tanımlamalar" };
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -16,7 +16,7 @@ export default async function TanimlamalarPage({ searchParams }: PageProps) {
   const requestedTab = Array.isArray(params.tab) ? params.tab[0] : params.tab;
 
   const plans = await getFilePlans();
-  const activePlanId = requestedPlan ?? plans[0]?.id;
+  const activePlanId = plans.find(plan => plan.id === requestedPlan)?.id ?? [...plans].filter(plan => plan.isActive).sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0]?.id;
   const tree = activePlanId ? await getFilePlanTree(activePlanId) : null;
 
   return (

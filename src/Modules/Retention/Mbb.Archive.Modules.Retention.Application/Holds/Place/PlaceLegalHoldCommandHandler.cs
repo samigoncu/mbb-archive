@@ -1,2 +1,26 @@
-using Mbb.Archive.Modules.Retention.Application;
-using Mbb.Archive.BuildingBlocks.Application;using Mbb.Archive.Modules.Retention.Application.Abstractions;using Mbb.Archive.Modules.Retention.Contracts.IntegrationEvents;using Mbb.Archive.Modules.Retention.Domain.Cases;namespace Mbb.Archive.Modules.Retention.Application.Holds.Place;public sealed class PlaceLegalHoldCommandHandler:ICommandHandler<PlaceLegalHoldCommand,Guid>{private readonly IRetentionRepository _repo;private readonly IOutbox<RetentionBoundary> _outbox;private readonly IUnitOfWork<RetentionBoundary> _uow;private readonly TimeProvider _time;public PlaceLegalHoldCommandHandler(IRetentionRepository repo,IOutbox<RetentionBoundary> outbox,IUnitOfWork<RetentionBoundary> uow,TimeProvider time){_repo=repo;_outbox=outbox;_uow=uow;_time=time;}public async Task<Result<Guid>> Handle(PlaceLegalHoldCommand c,CancellationToken ct){var item=await _repo.GetCaseAsync(c.RetentionCaseId,ct);if(item is null)return Result<Guid>.Failure(Error.NotFound("retention.case_not_found","Retention case was not found."));if(await _repo.GetActiveHoldAsync(item.Id,ct) is not null)return Result<Guid>.Failure(Error.Conflict("retention.hold_exists","An active legal hold already exists."));var now=_time.GetUtcNow();var hold=LegalHold.Place(item.Id,item.ArchiveRecordId,c.Reason,c.PlacedBy,now);item.PlaceHold();await _repo.AddHoldAsync(hold,ct);_outbox.Enqueue(new LegalHoldPlacedIntegrationEvent(Guid.CreateVersion7(),item.Id,item.ArchiveRecordId,hold.Reason,now));await _uow.SaveChangesAsync(ct);return Result<Guid>.Success(hold.Id);}}
+using Mbb.Archive.BuildingBlocks.Application;
+using Mbb.Archive.BuildingBlocks.Application.Security;
+using Mbb.Archive.Modules.Retention.Application.Abstractions;
+using Mbb.Archive.Modules.Retention.Contracts.IntegrationEvents;
+using Mbb.Archive.Modules.Retention.Domain.Cases;
+namespace Mbb.Archive.Modules.Retention.Application.Holds.Place;
+
+public sealed class PlaceLegalHoldCommandHandler(IRetentionRepository repository,
+    IOutbox<RetentionBoundary> outbox, IUnitOfWork<RetentionBoundary> unitOfWork, TimeProvider time, IDocumentVisibility visibility)
+    : ICommandHandler<PlaceLegalHoldCommand, Guid>
+{
+    public async Task<Result<Guid>> Handle(PlaceLegalHoldCommand command, CancellationToken ct)
+    {
+        var item = await repository.GetCaseAsync(command.RetentionCaseId, ct);
+        if (item is null || !(await visibility.FilterAsync([item.DocumentId], ct)).Contains(item.DocumentId)) return Result<Guid>.Failure(Error.NotFound("retention.case_not_found", "Saklama dosyası bulunamadı."));
+        var now = time.GetUtcNow();
+        var hold = LegalHold.Place(item.Id, item.ArchiveRecordId, command.Reason, command.PlacedBy, now);
+        item.PlaceHold();
+        await repository.AddHoldAsync(hold, ct);
+        outbox.Enqueue(new LegalHoldPlacedIntegrationEvent(Guid.CreateVersion7(), item.Id, item.ArchiveRecordId, hold.Reason, now));
+        outbox.Enqueue(new LegalHoldChangedIntegrationEvent(Guid.CreateVersion7(), hold.Id, item.Id, item.DocumentId,
+            command.PlacedBy, "Place", hold.Reason, now));
+        await unitOfWork.SaveChangesAsync(ct);
+        return Result<Guid>.Success(hold.Id);
+    }
+}

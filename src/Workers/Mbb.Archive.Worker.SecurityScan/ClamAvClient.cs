@@ -99,6 +99,9 @@ internal sealed record ClamAvScanResult(
 {
     internal static ClamAvScanResult Parse(string response)
     {
+        if (response.Contains("INSTREAM size limit exceeded", StringComparison.OrdinalIgnoreCase))
+            return new(false, "Heuristics.Limits.Exceeded.StreamMaxLength", response);
+
         if (response.EndsWith("OK", StringComparison.Ordinal))
             return new(true, null, response);
 

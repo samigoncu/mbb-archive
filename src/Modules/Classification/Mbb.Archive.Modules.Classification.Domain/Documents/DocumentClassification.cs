@@ -31,6 +31,8 @@ public sealed class DocumentClassification : AggregateRoot<DocumentClassificatio
     public bool IsPrimary { get; private set; }
     public DateTimeOffset ClassifiedAt { get; private set; }
 
+    public void SetPrimary(bool primary) => IsPrimary = primary;
+
     public static DocumentClassification Create(
         Guid documentId,
         FilePlanId filePlanId,

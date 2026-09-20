@@ -4,6 +4,7 @@ namespace Mbb.Archive.Modules.Retention.Application.Abstractions;
 
 public interface IRetentionQueries
 {
+    Task<RetentionCaseListItem?> GetCaseAsync(Guid id, CancellationToken ct);
     Task<PagedResult<RetentionCaseListItem>> GetCasesPageAsync(
         PageRequest page,
         RetentionCaseFilter filter,
@@ -49,4 +50,6 @@ public sealed record LegalHoldListItem(
     string PlacedBy,
     DateTimeOffset PlacedAt,
     DateTimeOffset? ReleasedAt,
-    bool IsActive);
+    bool IsActive,
+    string? ReleasedBy = null,
+    string? ReleaseReason = null);

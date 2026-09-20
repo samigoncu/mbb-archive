@@ -19,6 +19,7 @@ public sealed class SearchDocument : AggregateRoot<Guid>
         Title = NormalizeRequired(title, "Document title");
         ClassificationJson = "[]";
         MetadataJson = "[]";
+        GeoJson = "[]";
         Revision = 1;
         UpdatedAt = now;
     }
@@ -30,6 +31,16 @@ public sealed class SearchDocument : AggregateRoot<Guid>
     public string? OcrJsonArtifactStorageKey { get; private set; }
     public string ClassificationJson { get; private set; } = "[]";
     public string MetadataJson { get; private set; } = "[]";
+
+    /// <summary>Belgenin aktif coğrafi ilişkileri; §10'daki CBS aranabilirliği.</summary>
+    public string GeoJson { get; private set; } = "[]";
+
+    /// <summary>
+    /// Sahibi birimin materyalize yolu. Arama sorgusu bu alan üzerinden
+    /// süzülür; indekste süzgeç olmazsa liste gizlense bile belge içeriği
+    /// arama sonucunda sızar.
+    /// </summary>
+    public string? OwnerUnitPath { get; private set; }
     public long Revision { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -73,6 +84,7 @@ public sealed class SearchDocument : AggregateRoot<Guid>
         DateTimeOffset now)
     {
         var entries = DeserializeList<SearchClassificationEntry>(ClassificationJson);
+        if (isPrimary) entries.RemoveAll(x => x.IsPrimary);
         entries.RemoveAll(x =>
             string.Equals(x.FilePlanCode, filePlanCode, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(x.ItemCode, itemCode, StringComparison.OrdinalIgnoreCase));
@@ -113,6 +125,35 @@ public sealed class SearchDocument : AggregateRoot<Guid>
         Touch(now);
     }
 
+    /// <summary>
+    /// Aktif coğrafi ilişkilerin tamamını değiştirir. Geo modülü fark değil
+    /// bütün küme yayınladığı için burada birleştirme yapılmaz; küme aynıysa
+    /// yeniden indeksleme tetiklenmez.
+    /// </summary>
+    public void ReplaceGeoRelations(
+        IReadOnlyList<SearchGeoRelationEntry> relations,
+        DateTimeOffset now)
+    {
+        var serialized = JsonSerializer.Serialize(relations, JsonOptions);
+
+        if (string.Equals(GeoJson, serialized, StringComparison.Ordinal))
+            return;
+
+        GeoJson = serialized;
+        Touch(now);
+    }
+
+    public void SetOwnerUnitPath(string? ownerUnitPath, DateTimeOffset now)
+    {
+        var normalized = NormalizeOptional(ownerUnitPath);
+
+        if (string.Equals(OwnerUnitPath, normalized, StringComparison.Ordinal))
+            return;
+
+        OwnerUnitPath = normalized;
+        Touch(now);
+    }
+
     private void Touch(DateTimeOffset now)
     {
         Revision++;
@@ -146,3 +187,10 @@ public sealed record SearchMetadataSchemaEntry(
     string SchemaName,
     int SchemaVersion,
     JsonElement Values);
+
+public sealed record SearchGeoRelationEntry(
+    Guid GeoEntityId,
+    string Name,
+    string EntityType,
+    string LayerName,
+    string RelationType);

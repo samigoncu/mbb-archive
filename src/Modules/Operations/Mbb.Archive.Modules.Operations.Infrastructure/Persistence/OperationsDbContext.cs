@@ -5,7 +5,9 @@ using Mbb.Archive.Modules.Operations.Domain.Recovery;
 using Mbb.Archive.Modules.Operations.Domain.Verifications;
 using Mbb.Archive.Modules.Operations.Domain.Alerts;
 using Mbb.Archive.Modules.Operations.Domain.Notifications;
+using Mbb.Archive.Modules.Operations.Domain.Branding;
 using Mbb.Archive.Modules.Operations.Domain.Storage;
+using Mbb.Archive.Modules.Operations.Infrastructure.Automation;
 
 namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence;
 
@@ -19,6 +21,7 @@ public sealed class OperationsDbContext :
     {
     }
 
+    internal DbSet<OperationsAutomationEvent> AutomationEvents => Set<OperationsAutomationEvent>();
     internal DbSet<VerificationRun> VerificationRuns => Set<VerificationRun>();
     internal DbSet<RecoveryDrill> RecoveryDrills => Set<RecoveryDrill>();
     internal DbSet<AlertRule> AlertRules => Set<AlertRule>();
@@ -27,6 +30,16 @@ public sealed class OperationsDbContext :
     internal DbSet<StorageCapacitySnapshot> StorageCapacitySnapshots => Set<StorageCapacitySnapshot>();
     internal DbSet<StorageGrowthForecast> StorageForecasts => Set<StorageGrowthForecast>();
     internal DbSet<VerificationEvidencePackage> VerificationEvidence => Set<VerificationEvidencePackage>();
+    internal DbSet<BrandingSettings> Branding => Set<BrandingSettings>();
+    internal DbSet<BrandingAsset> BrandingAssets => Set<BrandingAsset>();
+
+    public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
+    {
+        try { return await base.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException ex) { throw new ConcurrencyConflictException("Kayıt başka bir işlem tarafından değiştirildi; yenileyip tekrar deneyin.", ex); }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+        { throw new ConcurrencyConflictException("Aynı kod veya etkin alarm zaten mevcut; kaydı yenileyin.", ex); }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,6 +66,7 @@ public sealed class OperationsDbContext :
         modelBuilder.Entity<RecoveryDrill>(entity =>
         {
             entity.ToTable("recovery_drills", "operations");
+            entity.Property<uint>("xmin").IsRowVersion();
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(x => x.BackupReference).HasColumnName("backup_reference").HasMaxLength(1000);
@@ -72,10 +86,20 @@ public sealed class OperationsDbContext :
             entity.Ignore(x => x.DomainEvents);
         });
 
+        modelBuilder.Entity<OperationsAutomationEvent>(e =>
+        {
+            e.ToTable("automation_events"); e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.Kind).HasColumnName("kind").HasMaxLength(100);
+            e.Property(x => x.EntityId).HasColumnName("entity_id").HasMaxLength(200); e.Property(x => x.Actor).HasColumnName("actor").HasMaxLength(300);
+            e.Property(x => x.Detail).HasColumnName("detail").HasMaxLength(5000); e.Property(x => x.OccurredAt).HasColumnName("occurred_at");
+            e.Property(x => x.AuditPublishedAt).HasColumnName("audit_published_at");
+            e.HasIndex(x => x.OccurredAt);
+        });
         ConfigureAlerts(modelBuilder);
         ConfigureNotifications(modelBuilder);
         ConfigureStorage(modelBuilder);
         ConfigureEvidence(modelBuilder);
+        ConfigureBranding(modelBuilder);
 
         base.OnModelCreating(modelBuilder);
     }
@@ -84,9 +108,15 @@ public sealed class OperationsDbContext :
     {
         modelBuilder.Entity<AlertRule>(entity =>
         {
+            entity.Property<uint>("xmin").IsRowVersion();
             entity.ToTable("alert_rules", "operations"); entity.HasKey(x => x.Id);
             entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(x => x.Code).HasColumnName("code").HasMaxLength(150); entity.HasIndex(x => x.Code).IsUnique();
+            entity.Property(x => x.BreachedSince).HasColumnName("breached_since");
+            entity.Property(x => x.LastEvaluatedAt).HasColumnName("last_evaluated_at");
+            entity.Property(x => x.LastEvaluationError).HasColumnName("last_evaluation_error").HasMaxLength(1000);
+            entity.Property(x => x.NotificationChannel).HasColumnName("notification_channel").HasConversion<string>().HasMaxLength(40);
+            entity.Property(x => x.NotificationTarget).HasColumnName("notification_target").HasMaxLength(1000);
             entity.Property(x => x.Metric).HasColumnName("metric").HasMaxLength(200);
             entity.Property(x => x.Comparison).HasColumnName("comparison").HasConversion<string>().HasMaxLength(40);
             entity.Property(x => x.Threshold).HasColumnName("threshold"); entity.Property(x => x.Severity).HasColumnName("severity").HasConversion<string>();
@@ -95,6 +125,8 @@ public sealed class OperationsDbContext :
         });
         modelBuilder.Entity<AlertInstance>(entity =>
         {
+            entity.Property<uint>("xmin").IsRowVersion();
+            entity.HasIndex(x => x.RuleId).IsUnique().HasFilter("status <> 'Resolved'");
             entity.ToTable("alert_instances", "operations"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(x => x.RuleId).HasColumnName("rule_id"); entity.Property(x => x.DeduplicationKey).HasColumnName("deduplication_key").HasMaxLength(300);
             entity.HasIndex(x => new { x.RuleId, x.DeduplicationKey, x.Status }); entity.Property(x => x.Severity).HasColumnName("severity").HasConversion<string>();
@@ -112,6 +144,11 @@ public sealed class OperationsDbContext :
         modelBuilder.Entity<NotificationDelivery>(entity =>
         {
             entity.ToTable("notification_deliveries", "operations"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(x => x.AlertId).HasColumnName("alert_id");
+            entity.Property(x => x.Subject).HasColumnName("subject").HasMaxLength(500);
+            entity.Property(x => x.Body).HasColumnName("body").HasMaxLength(4000);
+            entity.Property(x => x.ProviderReference).HasColumnName("provider_reference").HasMaxLength(1000);
+            entity.HasIndex(x => new { x.Status, x.NextAttemptAt });
             entity.Property(x => x.Channel).HasColumnName("channel").HasConversion<string>(); entity.Property(x => x.Target).HasColumnName("target").HasMaxLength(1000);
             entity.Property(x => x.Status).HasColumnName("status").HasConversion<string>(); entity.Property(x => x.AttemptCount).HasColumnName("attempt_count");
             entity.Property(x => x.LastError).HasColumnName("last_error").HasMaxLength(4000); entity.Property(x => x.CreatedAt).HasColumnName("created_at");
@@ -128,5 +165,39 @@ public sealed class OperationsDbContext :
     private static void ConfigureEvidence(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<VerificationEvidencePackage>(entity => { entity.ToTable("verification_evidence", "operations"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever(); entity.Property(x => x.RunId).HasColumnName("run_id"); entity.Property(x => x.RunType).HasColumnName("run_type").HasMaxLength(100); entity.Property(x => x.StartedAt).HasColumnName("started_at"); entity.Property(x => x.CompletedAt).HasColumnName("completed_at"); entity.Property<string>("Result").HasColumnName("result").HasMaxLength(40); entity.Property(x => x.CheckedItems).HasColumnName("checked_items"); entity.Property(x => x.FailedItems).HasColumnName("failed_items"); entity.Property(x => x.ReportJson).HasColumnName("report_json").HasColumnType("jsonb"); entity.Property(x => x.Sha256).HasColumnName("sha256").HasMaxLength(64); entity.Property(x => x.GeneratedAt).HasColumnName("generated_at"); entity.Property(x => x.GeneratorVersion).HasColumnName("generator_version").HasMaxLength(100); });
+    }
+
+    private static void ConfigureBranding(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<BrandingSettings>(entity =>
+        {
+            entity.ToTable("branding", "operations");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(x => x.SiteTitle).HasColumnName("site_title").HasMaxLength(BrandingSettings.MaxTextLength);
+            entity.Property(x => x.InstitutionName).HasColumnName("institution_name").HasMaxLength(BrandingSettings.MaxTextLength);
+            entity.Property(x => x.Description).HasColumnName("description").HasMaxLength(BrandingSettings.MaxDescriptionLength);
+            entity.Property(x => x.DepartmentName).HasColumnName("department_name").HasMaxLength(BrandingSettings.MaxTextLength);
+            entity.Property(x => x.LogoUrl).HasColumnName("logo_url").HasMaxLength(BrandingSettings.MaxUrlLength);
+            entity.Property(x => x.FaviconUrl).HasColumnName("favicon_url").HasMaxLength(BrandingSettings.MaxUrlLength);
+            entity.Property(x => x.LoginImageUrl).HasColumnName("login_image_url").HasMaxLength(BrandingSettings.MaxUrlLength);
+            entity.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
+            entity.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(300);
+            entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+            entity.HasData(new BrandingSettings());
+        });
+
+        modelBuilder.Entity<BrandingAsset>(entity =>
+        {
+            entity.ToTable("branding_assets", "operations");
+            entity.HasKey(x => x.Kind);
+            entity.Property(x => x.Kind).HasColumnName("kind").HasMaxLength(40);
+            entity.Property(x => x.Content).HasColumnName("content");
+            entity.Property(x => x.ContentType).HasColumnName("content_type").HasMaxLength(100);
+            entity.Property(x => x.FileName).HasColumnName("file_name").HasMaxLength(300);
+            entity.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
+            entity.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(300);
+            entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        });
     }
 }

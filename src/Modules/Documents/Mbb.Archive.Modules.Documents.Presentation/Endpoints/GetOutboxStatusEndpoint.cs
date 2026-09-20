@@ -25,6 +25,7 @@ internal static class GetOutboxStatusEndpoint
                         ? ApiResults.Problem(result.Error)
                         : Results.Ok(result.Value);
                 })
+            .RequireAuthorization("permission:documents.operations.read")
             .WithName("GetDocumentsOutboxStatus")
             .WithSummary("Gets Documents transactional Outbox operational status.");
 

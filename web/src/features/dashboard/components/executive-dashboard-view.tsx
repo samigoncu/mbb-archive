@@ -3,246 +3,227 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Archive,
   ArrowUpRight,
   BarChart3,
-  Boxes,
-  Calendar,
-  CheckCircle2,
-  ChevronRight,
-  Download,
-  FileCheck,
+  Clock,
   FileSearch,
-  FileSpreadsheet,
   FileStack,
   FileText,
   FolderOpen,
-  FolderTree,
   HandCoins,
-  Home,
   Layers,
   MapPin,
-  MoreHorizontal,
   PieChart,
-  Printer,
-  RefreshCw,
-  ScanLine,
-  Search,
-  Settings,
-  ShieldCheck,
-  Sparkles,
-  TrendingUp,
-  Upload,
-  Users,
+  Library,
+  type LucideIcon,
+  Trash2,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import type { LocationOccupancyItem } from "@/features/physical-archive/api/get-occupancy";
-import type { FolderListItem } from "@/features/physical-archive/model/folder";
-import type { DocumentListItem } from "@/features/documents/model/document";
-import type { LoanDetailsItem } from "@/features/loans/model/loan";
+import type { DashboardSummary } from "@/features/dashboard/api/get-dashboard-summary";
+import { folderStatusLabels } from "@/features/physical-archive/model/folder";
+
+/**
+ * Binlik ayracı elle uygulanır; `toLocaleString` sunucu ile tarayıcıda farklı
+ * ICU verisiyle çalışıp hydration uyuşmazlığı üretebilir.
+ */
+function formatCount(value: number): string {
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+/** Ölçüm gelmediyse uydurma değer değil, "—" gösterilir. */
+function formatMeasurement(value: number | null): string {
+  return value === null ? "—" : formatCount(value);
+}
+
+const statusColors: Record<string, string> = {
+  Available: "#10b981",
+  OnLoan: "#f59e0b",
+  Transferred: "#0284c7",
+  Disposed: "#e11d48",
+};
+
+const statusHrefs: Record<string, string> = {
+  Available: "/dosya-islemleri",
+  OnLoan: "/odunc",
+  Transferred: "/devir-imha",
+  Disposed: "/devir-imha",
+};
 
 export function ExecutiveDashboardView({
-  totalDocumentCount,
-  todayUploadCount,
-  locations,
-  folders,
-  documents,
-  loans,
+  summary,
 }: {
-  totalDocumentCount: number;
-  todayUploadCount: number;
-  locations: LocationOccupancyItem[];
-  folders: FolderListItem[];
-  documents: DocumentListItem[];
-  loans: LoanDetailsItem[];
+  summary: DashboardSummary;
 }) {
+  const { documents, folders, loans, locations, operations } = summary;
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
   const [hoveredSlice, setHoveredSlice] = useState<number | null>(null);
 
-  // Toplam Klasör Sayısı (Gerçek Veri)
-  const totalFolderCount = useMemo(() => {
-    const fromLocs = locations.reduce((sum, l) => sum + l.folderCount, 0);
-    return Math.max(fromLocs, folders.length);
-  }, [locations, folders]);
-
-  // Toplam Metraj (Gerçek Raf Kapasitesi Üzerinden 0.1m/klasör)
-  const totalCapacity = useMemo(() => {
-    return locations.reduce((sum, l) => sum + (l.capacity ?? 0), 0);
-  }, [locations]);
-  const totalMetraj = (totalCapacity * 0.1).toFixed(1);
-
-  // Gerçek Verilerle Bar Grafiği (Klasörlerin Dosya Planı veya Konum Dağılımı)
+  // Yerleşim doluluğu: konuma doğrudan yerleştirilmiş klasör sayıları (kesin veri).
   const barData = useMemo(() => {
-    if (folders.length === 0) return [];
-    const countsByPlan: Record<string, number> = {};
-    folders.forEach((f) => {
-      const code = f.filePlanCode || "Diğer";
-      countsByPlan[code] = (countsByPlan[code] || 0) + 1;
-    });
+    const colors = [
+      "#6366f1", "#4f46e5", "#0ea5e9", "#0284c7", "#3b82f6",
+      "#8b5cf6", "#6d28d9", "#06b6d4", "#10b981", "#f59e0b",
+    ];
 
-    const colors = ["#6366f1", "#4f46e5", "#0ea5e9", "#0284c7", "#3b82f6", "#8b5cf6", "#6d28d9", "#06b6d4", "#10b981", "#f59e0b"];
-    return Object.entries(countsByPlan).slice(0, 10).map(([planCode, count], i) => ({
-      label: `SDP ${planCode}`,
-      count,
-      color: colors[i % colors.length],
-    }));
-  }, [folders]);
-
-  // Gerçek Verilerle Pasta Dilim Grafiği (Yerleşim Birimlerine Göre Dağılım)
-  const donutData = useMemo(() => {
-    if (locations.length === 0) return [];
-    const colors = ["#0284c7", "#0ea5e9", "#38bdf8", "#60a5fa", "#93c5fd", "#bfdbfe", "#e2e8f0"];
-    const totalCount = locations.reduce((sum, l) => sum + l.folderCount, 0) || 1;
-
-    return locations.slice(0, 7).map((loc, i) => {
-      const percent = Math.round((loc.folderCount / totalCount) * 100);
-      return {
-        label: loc.name || loc.code,
-        count: loc.folderCount,
-        percent: percent || 0,
+    return locations.items
+      .filter((location) => location.folderCount > 0)
+      .sort((a, b) => b.folderCount - a.folderCount)
+      .slice(0, 10)
+      .map((location, i) => ({
+        // Raf/dolap adları konumlar arasında tekrar eder; benzersiz olan koddur.
+        label: location.code,
+        name: location.name,
+        code: location.code,
+        count: location.folderCount,
+        capacity: location.capacity,
         color: colors[i % colors.length],
-      };
-    });
-  }, [locations]);
+      }));
+  }, [locations.items]);
+
+  // Dosya durum dağılımı: her dilim filtrelenmiş kesin toplamdan gelir.
+  const donutData = useMemo(() => {
+    const entries = [
+      { status: "Available", count: folders.available },
+      { status: "OnLoan", count: folders.onLoan },
+      { status: "Transferred", count: folders.transferred },
+      { status: "Disposed", count: folders.disposed },
+    ].filter((entry) => entry.count > 0);
+
+    const total = entries.reduce((sum, entry) => sum + entry.count, 0) || 1;
+
+    return entries.map((entry) => ({
+      ...entry,
+      label: folderStatusLabels[entry.status as keyof typeof folderStatusLabels],
+      percent: Math.round((entry.count / total) * 100),
+      color: statusColors[entry.status],
+      href: statusHrefs[entry.status],
+    }));
+  }, [folders.available, folders.onLoan, folders.transferred, folders.disposed]);
+
+  const occupancyPercent =
+    locations.capacity > 0
+      ? Math.round((locations.used / locations.capacity) * 100)
+      : null;
 
   return (
     <div className="flex flex-col gap-5">
-      {/* 1. MBB Arşiv ÜST KOYU HIZLI MODÜL ŞERİDİ */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 text-slate-100 px-4 py-2.5 shadow-md flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-orange-600 text-white font-black text-xs">
-            d
-          </span>
-          <span className="font-bold text-xs tracking-tight">MBB Kurumsal Dijital Arşiv Portalı</span>
-        </div>
-
-        <nav className="flex flex-wrap items-center gap-1 sm:gap-2 text-[11px] font-medium text-slate-300">
-          <Link
-            href="/tarama"
-            className="hover:bg-slate-800 hover:text-white rounded px-2 py-1 transition-colors flex items-center gap-1"
-          >
-            <ScanLine className="size-3 text-sky-400" />
-            Çoklu İndeksleme
-          </Link>
-          <Link
-            href="/documents"
-            className="hover:bg-slate-800 hover:text-white rounded px-2 py-1 transition-colors flex items-center gap-1"
-          >
-            <Upload className="size-3 text-emerald-400" />
-            Dosya Yükle
-          </Link>
-          <Link
-            href="/arsiv-yerlesimi"
-            className="hover:bg-slate-800 hover:text-white rounded px-2 py-1 transition-colors flex items-center gap-1"
-          >
-            <Archive className="size-3 text-amber-400" />
-            Dosya Taşıma
-          </Link>
-          <Link
-            href="/arsiv-simulatoru"
-            className="hover:bg-slate-800 hover:text-white rounded px-2 py-1 transition-colors flex items-center gap-1 font-bold text-sky-400"
-          >
-            <Boxes className="size-3 text-sky-400" />
-            Arşiv Simülatörü
-          </Link>
-          <Link
-            href="/arama"
-            className="hover:bg-slate-800 hover:text-white rounded px-2 py-1 transition-colors flex items-center gap-1"
-          >
-            <Search className="size-3 text-purple-400" />
-            İçerikten Arama
-          </Link>
-          <Link
-            href="/tanimlamalar"
-            className="hover:bg-slate-800 hover:text-white rounded px-2 py-1 transition-colors flex items-center gap-1"
-          >
-            <FolderTree className="size-3 text-rose-400" />
-            Standart Dosya Planı
-          </Link>
-          <Link
-            href="/odunc"
-            className="hover:bg-slate-800 hover:text-white rounded px-2 py-1 transition-colors flex items-center gap-1"
-          >
-            <HandCoins className="size-3 text-yellow-400" />
-            Ödünç Takip
-          </Link>
-        </nav>
-      </div>
-
-            {/* 2. MBB Arşiv 4 BÜYÜK RENKLİ İSTATİSTİK KARTI (Screenshot 2 Birebir Paritesi) */}
+      {/* 1. DÖRT BÜYÜK İSTATİSTİK KARTI — tamamı ilgili modüle gider */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* KART 1: TURUNCU - BUGÜN YÜKLENENLER */}
-        <div className="relative overflow-hidden rounded-xl bg-[#f97316] p-4 text-white shadow-md flex flex-col justify-between min-h-[140px]">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-orange-100">
-              BUGÜN YÜKLENENLER
-            </span>
-            <span className="text-2xl font-black">{todayUploadCount || 1}</span>
-          </div>
-          <div className="mt-4 pt-2 border-t border-white/20 flex items-center justify-between text-[10px] font-medium text-orange-100">
-            <span>Bu Hafta Yüklenen: <strong className="text-white font-bold">90</strong></span>
-            <span>Bugün Yüklenen Sayfa: <strong className="text-white font-bold">{todayUploadCount || 1}</strong></span>
-          </div>
-        </div>
+        <StatCard
+          href="/documents"
+          background="#f97316"
+          title="BUGÜN YÜKLENEN BELGE"
+          icon={FileText}
+          tone="text-orange-100"
+          value={`${formatCount(documents.today.count)}${documents.today.isPartial ? "+" : ""}`}
+          footer={[
+            {
+              label: "Son 7 Gün",
+              value: `${formatCount(documents.lastSevenDays.count)}${documents.lastSevenDays.isPartial ? "+" : ""}`,
+            },
+            { label: "Toplam Belge", value: formatCount(documents.total) },
+          ]}
+        />
 
-        {/* KART 2: YEŞİL - TOPLAM DOSYA SAYISI */}
-        <div className="relative overflow-hidden rounded-xl bg-[#10b981] p-4 text-white shadow-md flex flex-col justify-between min-h-[140px]">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-100">
-              TOPLAM DOSYA SAYISI
-            </span>
-            <span className="text-2xl font-black">{totalFolderCount || 18083}</span>
-          </div>
-          <div className="mt-4 pt-2 border-t border-white/20 flex items-center justify-between text-[10px] font-medium text-emerald-100">
-            <span>Belge Grubu: <strong className="text-white font-bold">27436</strong></span>
-            <span>İndekslenmemiş: <strong className="text-white font-bold">15372</strong></span>
-          </div>
-        </div>
+        <StatCard
+          href="/dosya-islemleri"
+          background="#10b981"
+          title="TOPLAM ARŞİV DOSYASI"
+          icon={FolderOpen}
+          tone="text-emerald-100"
+          value={formatCount(folders.total)}
+          footer={[
+            { label: "Rafta", value: formatCount(folders.available) },
+            { label: "Ödünçte", value: formatCount(folders.onLoan) },
+          ]}
+        />
 
-        {/* KART 3: MAVİ - TOPLAM SAYFA SAYISI */}
-        <div className="relative overflow-hidden rounded-xl bg-[#0284c7] p-4 text-white shadow-md flex flex-col justify-between min-h-[140px]">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-sky-100">
-              TOPLAM SAYFA SAYISI
-            </span>
-            <span className="text-2xl font-black">{totalDocumentCount || 83102}</span>
-          </div>
-          <div className="mt-4 pt-2 border-t border-white/20 flex items-center justify-between text-[10px] font-medium text-sky-100">
-            <span>İndekslenen: <strong className="text-white font-bold">47147</strong></span>
-            <span>OCR Yapılan: <strong className="text-white font-bold">15137</strong></span>
-          </div>
-        </div>
+        <StatCard
+          href="/arama"
+          background="#0284c7"
+          title="İNDEKSLENEN BELGE"
+          icon={FileSearch}
+          tone="text-sky-100"
+          value={formatMeasurement(documents.indexed)}
+          footer={[
+            { label: "Toplam Belge", value: formatCount(documents.total) },
+            { label: "Kuyrukta", value: formatMeasurement(documents.indexPending) },
+          ]}
+        />
 
-        {/* KART 4: KIRMIZI - TOPLAM PROJE METRAJI */}
-        <div className="relative overflow-hidden rounded-xl bg-[#dc2626] p-4 text-white shadow-md flex flex-col justify-between min-h-[140px]">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-red-100">
-              TOPLAM PROJE METRAJI
-            </span>
-            <span className="text-lg font-black truncate max-w-[160px]">3072383939461,62 m</span>
-          </div>
-          <div className="mt-4 pt-2 border-t border-white/20 flex items-center justify-between text-[10px] font-medium text-red-100">
-            <span>Toplam Proje: <strong className="text-white font-bold">22</strong></span>
-            <span>İndekslenen Proje: <strong className="text-white font-bold">20</strong></span>
-          </div>
-        </div>
+        <StatCard
+          href="/arsiv-yerlesimi"
+          background="#dc2626"
+          title="RAF KAPASİTESİ"
+          icon={Library}
+          tone="text-red-100"
+          value={locations.capacity > 0 ? formatCount(locations.capacity) : "—"}
+          footer={[
+            { label: "Dolu", value: formatCount(locations.used) },
+            {
+              label: "Doluluk",
+              value: occupancyPercent === null ? "—" : `%${occupancyPercent}`,
+            },
+          ]}
+        />
       </div>
 
-      {/* 3. MBB Arşiv ÇİFT GRAFİK BÖLÜMÜ (BAR GRAFİĞİ + PASTA DİLİM GRAFİĞİ) */}
+      {/* 2. İKİNCİL KUTUCUKLAR — hepsi tıklanabilir */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <MiniStat
+          href="/odunc"
+          icon={HandCoins}
+          label="Zimmetteki Dosya"
+          value={formatCount(loans.active)}
+        />
+        <MiniStat
+          href="/odunc"
+          icon={Clock}
+          label="Gecikmiş İade"
+          value={formatCount(loans.overdue)}
+          alert={loans.overdue > 0}
+        />
+        <MiniStat
+          href="/devir-imha"
+          icon={Layers}
+          label="Devredilen Dosya"
+          value={formatCount(folders.transferred)}
+        />
+        <MiniStat
+          href="/devir-imha"
+          icon={Trash2}
+          label="İmha Edilen"
+          value={formatCount(folders.disposed)}
+        />
+        <MiniStat
+          href="/arsiv-yerlesimi"
+          icon={MapPin}
+          label="Yerleşim Birimi"
+          value={formatCount(locations.count)}
+        />
+        <MiniStat
+          href="/operations"
+          icon={FileStack}
+          label="İşlem Kuyruğu"
+          value={formatMeasurement(operations?.processingActive ?? null)}
+          alert={(operations?.processingFailed ?? 0) > 0}
+        />
+      </div>
+
+      {/* 3. ÇİFT GRAFİK BÖLÜMÜ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* SOL GRAFİK: DOSYA / EVRAK GRAFİĞİ (BAR CHART) */}
+        {/* SOL: YERLEŞİM BAZLI DOSYA DAĞILIMI */}
         <div className="lg:col-span-7 rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <BarChart3 className="size-4 text-primary" />
-              <h3 className="text-sm font-bold text-foreground">DOSYA / EVRAK TASNİF DAĞILIMI</h3>
+              <h3 className="text-sm font-bold text-foreground">YERLEŞİM BAZLI DOSYA DAĞILIMI</h3>
             </div>
-            <span className="text-xs text-muted-foreground">Kayıtlı Dağılım</span>
+            <span className="text-xs text-muted-foreground">En yoğun 10 konum</span>
           </div>
 
           {barData.length === 0 ? (
             <div className="p-12 text-center text-xs text-muted-foreground">
-              Henüz grafik oluşturulacak arşiv klasörü veya evrak bulunmamaktadır.
+              Henüz bir konuma yerleştirilmiş arşiv dosyası bulunmamaktadır.
             </div>
           ) : (
             <div className="relative my-4 flex h-60 items-end gap-2 sm:gap-3 px-2 pt-6">
@@ -252,15 +233,18 @@ export function ExecutiveDashboardView({
                 const isHovered = hoveredBar === i;
 
                 return (
-                  <div
-                    key={bar.label}
+                  <Link
+                    key={bar.code}
+                    href="/arsiv-yerlesimi"
                     onMouseEnter={() => setHoveredBar(i)}
                     onMouseLeave={() => setHoveredBar(null)}
-                    className="group relative flex flex-1 flex-col items-center justify-end h-full cursor-pointer"
+                    aria-label={`${bar.code} konumunda ${bar.count} dosya — arşiv yerleşimini aç`}
+                    className="group relative flex flex-1 flex-col items-center justify-end h-full rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {isHovered && (
                       <div className="absolute -top-10 z-20 rounded-md bg-slate-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg whitespace-nowrap">
-                        {bar.label}: {bar.count} Dosya
+                        {bar.name ? `${bar.name} · ` : ""}{bar.code}: {formatCount(bar.count)} dosya
+                        {bar.capacity ? ` / ${formatCount(bar.capacity)} kapasite` : ""}
                       </div>
                     )}
                     <div
@@ -273,33 +257,36 @@ export function ExecutiveDashboardView({
                     <span className="mt-2 w-full truncate text-center text-[10px] font-semibold text-muted-foreground">
                       {bar.label}
                     </span>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
           )}
 
           <div className="pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-            <span>Sistemde toplam <strong>{totalFolderCount}</strong> arşiv klasörü listelenmektedir.</span>
+            <span>
+              Sistemde toplam <strong>{formatCount(folders.total)}</strong> arşiv dosyası,
+              bunların <strong>{formatCount(folders.placed)}</strong> tanesi bir konuma yerleştirilmiş.
+            </span>
             <Link href="/dosya-islemleri" className="font-bold text-primary hover:underline">
               Tümünü Gör →
             </Link>
           </div>
         </div>
 
-        {/* SAĞ GRAFİK: PASTA DİLİM GRAFİĞİ (DONUT CHART) */}
+        {/* SAĞ: DOSYA DURUM DAĞILIMI */}
         <div className="lg:col-span-5 rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <PieChart className="size-4 text-primary" />
-              <h3 className="text-sm font-bold text-foreground">YERLEŞİM & DEPO ORANLARI</h3>
+              <h3 className="text-sm font-bold text-foreground">DOSYA DURUM DAĞILIMI</h3>
             </div>
-            <span className="text-xs text-muted-foreground">Kapasite / Doluluk</span>
+            <span className="text-xs text-muted-foreground">Kesin toplamlar</span>
           </div>
 
           {donutData.length === 0 ? (
             <div className="p-12 text-center text-xs text-muted-foreground">
-              Henüz yerleşim doluluk verisi bulunmamaktadır.
+              Henüz durum dağılımı oluşturacak arşiv dosyası bulunmamaktadır.
             </div>
           ) : (
             <div className="my-4 flex flex-col items-center justify-center gap-4">
@@ -316,20 +303,18 @@ export function ExecutiveDashboardView({
                   />
                   {donutData.reduce(
                     (acc, slice, idx) => {
-                      const strokeDasharray = `${slice.percent} ${100 - slice.percent}`;
-                      const strokeDashoffset = -acc.offset;
                       acc.elements.push(
                         <circle
-                          key={slice.label}
+                          key={slice.status}
                           cx="18"
                           cy="18"
                           r="15.9155"
                           fill="transparent"
                           stroke={slice.color}
-                          strokeWidth="3.8"
-                          strokeDasharray={strokeDasharray}
-                          strokeDashoffset={strokeDashoffset}
-                          className="transition-all duration-300 hover:opacity-80"
+                          strokeWidth={hoveredSlice === idx ? "4.6" : "3.8"}
+                          strokeDasharray={`${slice.percent} ${100 - slice.percent}`}
+                          strokeDashoffset={-acc.offset}
+                          className="transition-all duration-300"
                         />
                       );
                       acc.offset += slice.percent;
@@ -340,31 +325,211 @@ export function ExecutiveDashboardView({
                 </svg>
 
                 <div className="absolute flex flex-col items-center justify-center text-center">
-                  <span className="text-xs font-bold text-muted-foreground">Depo</span>
+                  <span className="text-xs font-bold text-muted-foreground">Dosya</span>
                   <span className="text-xl font-black text-foreground">
-                    {locations.length}
+                    {formatCount(folders.total)}
                   </span>
-                  <span className="text-[9px] text-muted-foreground">Birim</span>
+                  <span className="text-[9px] text-muted-foreground">Toplam</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 w-full text-xs">
-                {donutData.map((slice) => (
-                  <div key={slice.label} className="flex items-center gap-1.5 truncate">
+                {donutData.map((slice, idx) => (
+                  <Link
+                    key={slice.status}
+                    href={slice.href}
+                    onMouseEnter={() => setHoveredSlice(idx)}
+                    onMouseLeave={() => setHoveredSlice(null)}
+                    className="flex items-center gap-1.5 truncate rounded px-1 py-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
                     <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
                     <span className="truncate text-muted-foreground text-[11px]">{slice.label}</span>
-                    <span className="font-bold text-foreground text-[11px] ml-auto">%{slice.percent}</span>
-                  </div>
+                    <span className="font-bold text-foreground text-[11px] ml-auto">
+                      {formatCount(slice.count)}
+                    </span>
+                  </Link>
                 ))}
               </div>
             </div>
           )}
 
           <div className="pt-3 border-t border-border text-center text-[11px] text-muted-foreground">
-            Toplam <strong>{totalFolderCount}</strong> klasör arşiv tasnifindedir.
+            {locations.count > 0 ? (
+              <>
+                <strong>{formatCount(locations.count)}</strong> yerleşim birimi tanımlı.
+              </>
+            ) : (
+              "Henüz yerleşim birimi tanımlanmamış."
+            )}
           </div>
         </div>
       </div>
+
+      {/* 4. SON KAYITLAR — her satır kendi kaydına gider */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <RecentPanel
+          icon={FileText}
+          title="SON EKLENEN BELGELER"
+          href="/documents"
+          emptyLabel="Henüz belge kaydı bulunmamaktadır."
+          rows={documents.recent.map((document) => ({
+            key: document.id,
+            href: `/documents/${document.id}`,
+            title: document.title,
+            meta: `${document.status} · ${formatCount(document.versionCount)} versiyon`,
+            date: document.createdAt,
+          }))}
+        />
+
+        <RecentPanel
+          icon={FolderOpen}
+          title="SON EKLENEN ARŞİV DOSYALARI"
+          href="/dosya-islemleri"
+          emptyLabel="Henüz arşiv dosyası bulunmamaktadır."
+          rows={folders.recent.map((folder) => ({
+            key: folder.id,
+            href: "/dosya-islemleri",
+            title: folder.title,
+            meta: `${folder.barcode} · ${folder.locationName || "konumsuz"} · ${
+              folderStatusLabels[folder.status]
+            }`,
+            date: folder.createdAt,
+          }))}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  href,
+  background,
+  title,
+  tone,
+  value,
+  footer,
+}: {
+  href: string;
+  icon: LucideIcon;
+  background: string;
+  title: string;
+  tone: string;
+  value: string;
+  footer: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{ backgroundColor: background }}
+      className="group relative overflow-hidden rounded-xl p-4 text-white shadow-md flex flex-col justify-between min-h-[140px] transition-all hover:brightness-110 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+    >
+      <Icon className="pointer-events-none absolute right-4 top-1/2 size-24 -translate-y-1/2 -rotate-12 text-white opacity-20" strokeWidth={1.5} aria-hidden="true" />
+      <div className="relative z-10 flex items-start justify-between gap-2">
+        <span className={`text-[11px] font-black uppercase tracking-wider ${tone}`}>
+          {title}
+        </span>
+        <span className="text-2xl font-black">{value}</span>
+      </div>
+      <div className={`relative z-10 mt-4 pt-2 border-t border-white/20 flex items-center justify-between text-[10px] font-medium ${tone}`}>
+        {footer.map((entry) => (
+          <span key={entry.label}>
+            {entry.label}: <strong className="text-white font-bold">{entry.value}</strong>
+          </span>
+        ))}
+      </div>
+      <ArrowUpRight className="absolute right-3 bottom-9 size-4 opacity-0 transition-opacity group-hover:opacity-80" aria-hidden />
+    </Link>
+  );
+}
+
+function MiniStat({
+  href,
+  icon: Icon,
+  label,
+  value,
+  alert = false,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  alert?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`group flex items-center gap-3 rounded-xl border bg-card p-3 shadow-xs transition-all hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        alert ? "border-destructive/50" : "border-border"
+      }`}
+    >
+      <span
+        className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
+          alert ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
+        }`}
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-[11px] font-medium text-muted-foreground">{label}</span>
+        <span className={`text-lg font-black ${alert ? "text-destructive" : "text-foreground"}`}>
+          {value}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function RecentPanel({
+  icon: Icon,
+  title,
+  href,
+  rows,
+  emptyLabel,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  href: string;
+  rows: Array<{ key: string; href: string; title: string; meta: string; date: string }>;
+  emptyLabel: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
+      <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="flex items-center gap-2">
+          <Icon className="size-4 text-primary" />
+          <h3 className="text-sm font-bold text-foreground">{title}</h3>
+        </div>
+        <Link href={href} className="text-xs font-bold text-primary hover:underline">
+          Tümünü Gör →
+        </Link>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="py-8 text-center text-xs text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <ul className="mt-2 flex flex-col">
+          {rows.map((row) => (
+            <li key={row.key}>
+              <Link
+                href={row.href}
+                className="flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm font-semibold text-foreground">{row.title}</span>
+                  <span className="truncate text-[11px] text-muted-foreground">{row.meta}</span>
+                </span>
+                <time
+                  dateTime={row.date}
+                  className="shrink-0 text-[11px] font-medium text-muted-foreground"
+                >
+                  {row.date.slice(0, 10)}
+                </time>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

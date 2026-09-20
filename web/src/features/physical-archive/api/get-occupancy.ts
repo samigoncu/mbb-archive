@@ -1,3 +1,5 @@
+"use server";
+
 import { apiGet } from "@/lib/api/api-client";
 import type { LocationType } from "@/features/physical-archive/model/location";
 
@@ -10,6 +12,12 @@ export type LocationOccupancyItem = {
   barcode: string;
   capacity: number | null;
   folderCount: number;
+  isActive: boolean;
+  /** Seviyenin görünen adı ve kuralları; sunucuda katalogla birleştirilir. */
+  typeName: string;
+  level: number;
+  canStoreFolder: boolean;
+  allowsCapacity: boolean;
 };
 
 export async function getLocationOccupancy(): Promise<LocationOccupancyItem[]> {

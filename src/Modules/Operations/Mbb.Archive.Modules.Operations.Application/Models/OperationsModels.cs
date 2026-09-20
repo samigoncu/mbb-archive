@@ -44,7 +44,7 @@ public sealed record RecoveryDrillDetails(
     int? ActualRtoMinutes,
     string EvidenceReference,
     DateTimeOffset PlannedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt, string RequestedBy, DateTimeOffset? StartedAt, string Notes);
 
 public sealed record DailyOperationsReport(
     DateTimeOffset GeneratedAt,
@@ -56,7 +56,7 @@ public sealed record DailyOperationsReport(
     IReadOnlyList<string> PriorityActions);
 
 public sealed record AlertRuleDetails(Guid Id, string Code, string Metric, string Comparison,
-    decimal Threshold, string Severity, TimeSpan EvaluationWindow, bool IsEnabled);
+    decimal Threshold, string Severity, TimeSpan EvaluationWindow, bool IsEnabled, string? NotificationChannel, string NotificationTarget, DateTimeOffset? LastEvaluatedAt, string LastEvaluationError);
 public sealed record AlertInstanceDetails(Guid Id, Guid RuleId, string DeduplicationKey,
     string Severity, string Status, decimal CurrentValue, int OccurrenceCount,
-    DateTimeOffset OpenedAt, DateTimeOffset LastObservedAt, DateTimeOffset? ResolvedAt);
+    DateTimeOffset OpenedAt, DateTimeOffset LastObservedAt, DateTimeOffset? ResolvedAt, string? AcknowledgedBy, string? AcknowledgementNote);

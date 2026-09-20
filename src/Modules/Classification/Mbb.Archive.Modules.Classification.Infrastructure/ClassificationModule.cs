@@ -44,13 +44,20 @@ public static class ClassificationModule
             .ValidateOnStart();
 
         services.AddSingleton(TimeProvider.System);
+        services.AddScoped<Mbb.Archive.Modules.Classification.Contracts.IFilePlanCatalog, FilePlanCatalog>();
+        services.AddScoped<Mbb.Archive.Modules.Classification.Contracts.IFilePlanEntryCatalog, FilePlanEntryCatalog>();
+        services.AddScoped<Mbb.Archive.Modules.Classification.Contracts.IDocumentClassificationFiling, DocumentClassificationFiling>();
         services.AddScoped<IClassificationRepository, EfClassificationRepository>();
         services.AddScoped<IClassificationQueries, EfClassificationQueries>();
+        services.AddScoped<Mbb.Archive.Modules.Classification.Contracts.IClassificationExportReader, ClassificationExportReader>();
         services.AddScoped<IUnitOfWork<ClassificationBoundary>>(sp => sp.GetRequiredService<ClassificationDbContext>());
         services.AddScoped<IOutbox<ClassificationBoundary>>(sp => sp.GetRequiredService<ClassificationDbContext>());
 
+        services.AddScoped<Mbb.Archive.Modules.Classification.Application.FilePlans.Retire.RetireFilePlanHandler>();
         services.AddScoped<CreateFilePlanCommandHandler>();
         services.AddScoped<AddFilePlanItemCommandHandler>();
+        services.AddScoped<Mbb.Archive.Modules.Classification.Application.FilePlans.Manage.FilePlanManagementHandlers>();
+        services.AddScoped<Mbb.Archive.Modules.Classification.Application.Metadata.Manage.MetadataSchemaManagementHandlers>();
         services.AddScoped<GetFilePlanTreeQueryHandler>();
         services.AddScoped<GetFilePlansQueryHandler>();
         services.AddScoped<GetMetadataSchemasQueryHandler>();

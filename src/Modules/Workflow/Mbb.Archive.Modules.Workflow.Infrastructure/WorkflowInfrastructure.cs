@@ -48,7 +48,9 @@ public sealed class WorkflowDbContext :
                     integrationEvent.OccurredAt));
         }
 
-        var result = await base.SaveChangesAsync(cancellationToken);
+        int result;
+        try { result = await base.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateConcurrencyException ex) { throw new ConcurrencyConflictException("Görev başka bir işlemde değişti. Listeyi yenileyin.", ex); }
         _pendingEvents.Clear();
         return result;
     }
@@ -173,6 +175,9 @@ public sealed class WorkflowDbContext :
             entity.Property(x => x.CompletedAt).HasColumnName("completed_at");
             entity.Property(x => x.CompletedBy).HasColumnName("completed_by").HasMaxLength(300);
             entity.Property(x => x.Outcome).HasColumnName("outcome").HasMaxLength(200);
+            entity.Property(x => x.AssigneeSubjectId).HasColumnName("assignee_subject_id").HasMaxLength(300);
+            entity.Property(x => x.AssignedBy).HasColumnName("assigned_by").HasMaxLength(300);
+            entity.Property(x => x.AssignedAt).HasColumnName("assigned_at");
             entity.Property(x => x.EscalationLevel).HasColumnName("escalation_level");
             entity.HasIndex(x => new { x.Status, x.DueAt });
         });
@@ -195,7 +200,7 @@ public sealed class WorkflowDbContext :
     }
 }
 
-internal sealed class EfWorkflowRepository : IWorkflowRepository
+internal sealed class EfWorkflowRepository : IWorkflowRepository, IWorkflowQueries
 {
     private readonly WorkflowDbContext _db;
 
@@ -248,6 +253,95 @@ internal sealed class EfWorkflowRepository : IWorkflowRepository
             .Select(x => x.Id)
             .Take(take)
             .ToListAsync(ct);
+
+    public async Task<PagedResult<DocumentWorkflowItem>> GetDocumentHistoryAsync(Guid documentId, PageRequest page, CancellationToken ct)
+    {
+        var rows = from instance in _db.Instances.AsNoTracking()
+                   from item in instance.WorkItems
+                   join definition in _db.Definitions.AsNoTracking() on instance.DefinitionId equals definition.Id
+                   where instance.DocumentId == documentId
+                   select new { instance, item, definition };
+        var count = await rows.LongCountAsync(ct);
+        var items = await rows.OrderByDescending(x => x.item.CreatedAt).ThenBy(x => x.item.Id)
+            .Skip((page.Page - 1) * page.PageSize).Take(page.PageSize)
+            .Select(x => new DocumentWorkflowItem(x.item.Id, x.instance.Id, x.definition.Name,
+                x.definition.Nodes.Where(n => n.Id == x.item.NodeId).Select(n => n.Name).FirstOrDefault() ?? "Görev",
+                x.instance.Status.ToString(), x.item.Status.ToString(), x.item.CreatedAt, x.item.DueAt,
+                x.item.AssigneeSubjectId, x.item.AssignedBy, x.item.AssignedAt,
+                x.item.CompletedBy, x.item.CompletedAt, x.item.Outcome, x.item.EscalationLevel)).ToArrayAsync(ct);
+        return new(items, page.Page, page.PageSize, count);
+    }
+
+    public async Task<IReadOnlyList<WorkflowWorkItemListItem>> GetWorkItemsAsync(
+        string? status,
+        IReadOnlyCollection<string>? permissions,
+        string? assigneeSubject,
+        DateTimeOffset now,
+        int take,
+        CancellationToken ct)
+    {
+        var rows =
+            from instance in _db.Instances.AsNoTracking()
+            from item in instance.WorkItems
+            join definition in _db.Definitions.AsNoTracking()
+                on instance.DefinitionId equals definition.Id
+            select new { instance, item, definition };
+
+        if (status == "completed")
+        {
+            rows = rows.Where(x => x.item.Status == WorkflowWorkItemStatus.Completed);
+        }
+        else if (status == "open")
+        {
+            rows = rows.Where(x => x.item.Status != WorkflowWorkItemStatus.Completed
+                && x.instance.Status != WorkflowInstanceStatus.Completed);
+        }
+
+        if (permissions is not null)
+        {
+            var allowed = permissions.ToArray();
+            rows = rows.Where(x => allowed.Contains(x.item.Permission));
+        }
+
+        if (assigneeSubject is not null)
+            rows = rows.Where(x => x.item.AssigneeSubjectId == null || x.item.AssigneeSubjectId == assigneeSubject || x.item.CompletedBy == assigneeSubject);
+
+        return await rows
+            .OrderByDescending(x => x.item.CreatedAt)
+            .Take(take)
+            .Select(x => new WorkflowWorkItemListItem(
+                x.item.Id,
+                x.instance.Id,
+                x.definition.Id,
+                x.definition.Name,
+                x.instance.DocumentId,
+                x.definition.Nodes
+                    .Where(n => n.Id == x.item.NodeId)
+                    .Select(n => n.Name)
+                    .FirstOrDefault() ?? string.Empty,
+                x.item.Permission,
+                x.item.Status.ToString(),
+                x.item.CreatedAt,
+                x.item.DueAt,
+                x.item.DueAt != null && x.item.DueAt <= now,
+                x.item.AssigneeSubjectId,
+                x.instance.ConcurrencyVersion,
+                x.definition.Key.StartsWith("assigned-"),
+                x.item.CompletedBy,
+                x.item.CompletedAt,
+                x.item.Outcome,
+                x.item.AssignedBy,
+                x.item.AssignedAt))
+            .ToListAsync(ct);
+    }
+
+    public Task<IReadOnlyList<WorkflowWorkItemListItem>> GetOpenWorkItemsAsync(
+        IReadOnlyCollection<string>? permissions,
+        string? assigneeSubject,
+        DateTimeOffset now,
+        int take,
+        CancellationToken ct)
+        => GetWorkItemsAsync("open", permissions, assigneeSubject, now, take, ct);
 }
 
 public static class WorkflowModule
@@ -265,7 +359,12 @@ public static class WorkflowModule
             options => options.UseNpgsql(connectionString));
 
         services.AddSingleton(TimeProvider.System);
-        services.AddScoped<IWorkflowRepository, EfWorkflowRepository>();
+        services.AddScoped<DocumentWorkflowHistoryHandler>();
+        services.AddScoped<EfWorkflowRepository>();
+        services.AddScoped<IWorkflowRepository>(
+            sp => sp.GetRequiredService<EfWorkflowRepository>());
+        services.AddScoped<IWorkflowQueries>(
+            sp => sp.GetRequiredService<EfWorkflowRepository>());
         services.AddScoped<IUnitOfWork<WorkflowBoundary>>(
             sp => sp.GetRequiredService<WorkflowDbContext>());
         services.AddScoped<IOutbox<WorkflowBoundary>>(
@@ -273,6 +372,8 @@ public static class WorkflowModule
         services.AddSingleton<WorkflowConditionEvaluator>();
         services.AddScoped<WorkflowRuntime>();
         services.AddScoped<WorkflowCommandHandlers>();
+        services.AddScoped<WorkflowAssignmentHandler>();
+        services.AddScoped<GetMyWorkItemsQueryHandler>();
         services.AddHostedService<WorkflowOutboxPublisher>();
 
         services.AddScoped<

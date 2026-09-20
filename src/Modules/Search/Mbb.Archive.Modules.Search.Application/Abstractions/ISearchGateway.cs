@@ -1,3 +1,5 @@
+using Mbb.Archive.BuildingBlocks.Application.Security;
+
 namespace Mbb.Archive.Modules.Search.Application.Abstractions;
 
 public interface ISearchGateway
@@ -7,6 +9,10 @@ public interface ISearchGateway
         CancellationToken cancellationToken);
 }
 
+/// <param name="Scope">
+/// Çağıranın erişim kapsamı. Bilinçli olarak zorunludur: isteğe bağlı olsaydı
+/// bir çağrı yerinde unutulduğunda arama tüm belgelerin içeriğini sızdırırdı.
+/// </param>
 public sealed record SearchRequest(
     string Query,
     int Page,
@@ -14,7 +20,16 @@ public sealed record SearchRequest(
     string? MimeType,
     string? FilePlanCode,
     string? MetadataKey,
-    string? MetadataValue);
+    string? MetadataValue,
+    AccessScope Scope,
+    IReadOnlyList<SearchCondition>? Conditions = null,
+    DateOnly? From = null,
+    DateOnly? To = null,
+    string DateField = "ingestedAt",
+    IReadOnlyList<Guid>? ExcludedDocumentIds = null,
+    string Sort = "relevance");
+
+public sealed record SearchCondition(string Field, string Operator, string Value);
 
 public sealed record SearchResponse(
     long Total,
@@ -29,7 +44,16 @@ public sealed record SearchHit(
     string? MimeType,
     double Score,
     IReadOnlyList<string> Fragments,
-    IReadOnlyList<PageMatch> Pages);
+    IReadOnlyList<PageMatch> Pages,
+    /// <summary>Sonucun neden bulunduğunu gösteren CBS ilişkileri (§30 adım 13).</summary>
+    IReadOnlyList<GeoMatch> GeoMatches,
+    DateTimeOffset? CreatedAt = null,
+    DateTimeOffset? IngestedAt = null);
+
+public sealed record GeoMatch(
+    string Name,
+    string EntityType,
+    string RelationType);
 
 public sealed record PageMatch(
     int PageNumber,

@@ -1,3 +1,4 @@
+import { OperationsControls } from "@/features/operations/controls";
 import { AlertTriangle, Boxes, Inbox, ServerCrash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/page";
@@ -13,7 +14,7 @@ import { StatTile } from "@/features/dashboard/components/stat-tile";
 import { getOperationsOverview } from "@/features/operations/api";
 import type { OperationalHealth } from "@/features/operations/types";
 
-export const metadata = { title: "Operasyon Merkezi · MBB Kurumsal Arşiv" };
+export const metadata = { title: "Operasyon Merkezi" };
 
 const healthLabels: Record<OperationalHealth, string> = {
   Healthy: "Sağlıklı",
@@ -205,6 +206,7 @@ export default async function OperationsPage() {
           )}
         </Panel>
       </div>
+      <OperationsControls />
     </div>
   );
 }

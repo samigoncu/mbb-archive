@@ -7,7 +7,9 @@ public sealed record StageDocumentFileCommand(
     string OriginalFileName,
     string ClientContentType,
     long DeclaredSizeBytes,
-    Stream Content)
+    Stream Content,
+    string SubmittedBy,
+    string? VersionReason)
     : ICommand<StageDocumentFileResponse>;
 
 public sealed record StageDocumentFileResponse(

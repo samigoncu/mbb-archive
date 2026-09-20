@@ -15,6 +15,7 @@ public sealed class AddFilePlanItemCommandHandler : ICommandHandler<AddFilePlanI
         try
         {
             var item=plan.AddItem(command.ParentId is null?null:new FilePlanItemId(command.ParentId.Value),command.Code,command.Title,command.Level,command.IsSelectable);
+            item.Rename(command.Title, command.Description);
             await _unitOfWork.SaveChangesAsync(ct); return Result<Guid>.Success(item.Id.Value);
         }
         catch(DomainRuleViolationException ex){return Result<Guid>.Failure(Error.Validation("classification.file_plan_item_invalid",ex.Message));}

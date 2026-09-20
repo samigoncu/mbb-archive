@@ -1,3 +1,5 @@
+"use server";
+
 import { apiGet } from "@/lib/api/api-client";
 import type { PagedResult } from "@/features/documents/model/document";
 import type { LoanDetailsItem, LoanFilters } from "@/features/loans/model/loan";
@@ -28,19 +30,10 @@ export async function getLoans(
     params.set("dueInDays", String(filters.dueInDays));
   }
 
-  try {
-    return await apiGet<PagedResult<LoanDetailsItem>>(
-      `/physical-archive/loans?${params.toString()}`,
-      { cache: "no-store" },
-    );
-  } catch {
-    return {
-      items: [],
-      totalCount: 0,
-      page,
-      pageSize,
-    };
-  }
+  return await apiGet<PagedResult<LoanDetailsItem>>(
+    `/physical-archive/loans?${params.toString()}`,
+    { cache: "no-store" },
+  );
 }
 
 /** Özet kartları için yalnızca toplam sayı gerekir; tek kayıt çekmek yeterli. */

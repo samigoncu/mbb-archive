@@ -11,5 +11,5 @@ internal sealed class SecurityScanOptions
 
     public string ClamAvHost { get; init; } = "localhost";
     public int ClamAvPort { get; init; } = 3310;
-    public int ClamAvTimeoutSeconds { get; init; } = 120;
+    public int ClamAvTimeoutSeconds { get; init; } = 660;
 }

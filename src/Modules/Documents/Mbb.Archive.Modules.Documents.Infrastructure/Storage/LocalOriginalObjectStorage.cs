@@ -105,6 +105,7 @@ internal sealed class LocalOriginalObjectStorage : IOriginalObjectStorage
             try
             {
                 File.Move(tempPath, finalPath);
+                ApplyWriteOnceProtection(finalPath);
             }
             catch (IOException) when (File.Exists(finalPath))
             {
@@ -127,6 +128,30 @@ internal sealed class LocalOriginalObjectStorage : IOriginalObjectStorage
         }
     }
 
+
+    /// <summary>
+    /// §3.1 WORM'un yerel karşılığı. Dosya salt okunur işaretlenir; bu,
+    /// uygulama ya da worker kaynaklı kazara üzerine yazmayı engeller.
+    /// Gerçek WORM garantisi için production'da S3 Object Lock kullanılmalıdır.
+    /// </summary>
+    private void ApplyWriteOnceProtection(string path)
+    {
+        if (!_options.Worm.Enabled)
+            return;
+
+        try
+        {
+            File.SetAttributes(path, File.GetAttributes(path) | FileAttributes.ReadOnly);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Dosya sistemi öznitelik desteklemiyorsa yazım geçerliliğini
+            // kaybetmez; içerik zaten hash ile adreslenmiştir.
+        }
+        catch (IOException)
+        {
+        }
+    }
 
     public Task<Stream?> OpenReadAsync(
         string storageKey,

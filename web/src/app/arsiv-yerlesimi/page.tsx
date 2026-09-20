@@ -4,11 +4,15 @@ import { StatTile } from "@/features/dashboard/components/stat-tile";
 import { getLocationOccupancy } from "@/features/physical-archive/api/get-occupancy";
 import { OccupancyTree } from "@/features/physical-archive/components/occupancy-tree";
 import { PageHeader } from "@/components/ui/page";
+import { NewLocationDialog } from "@/features/physical-archive/components/location-dialogs";
+import { getLocationTypes } from "@/features/physical-archive/api/get-location-types";
+import { getCurrentUser } from "@/features/access/api/get-current-user";
 
-export const metadata = { title: "Arşiv Yerleşimi · MBB Kurumsal Arşiv" };
+export const metadata = { title: "Arşiv Yerleşimi" };
 
 export default async function ArsivYerlesimiPage() {
-  const locations = await getLocationOccupancy();
+  const [locations, user, types] = await Promise.all([getLocationOccupancy(), getCurrentUser(), getLocationTypes()]);
+  const canManage = !!user && (user.isBootstrapAdministrator || user.permissions.includes("physical-archive.manage"));
 
   const withCapacity = locations.filter((item) => item.capacity !== null);
   const totalCapacity = withCapacity.reduce(
@@ -26,30 +30,15 @@ export default async function ArsivYerlesimiPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Arşiv Yerleşimi"
-        description="Depo hiyerarşisi, raf kapasiteleri ve doluluk oranları."
+        description="Bina, oda, dolap ve raf hiyerarşisini yönetin; kayıtlı kapasite ve dosya sayılarını inceleyin."
+        actions={canManage && locations.length === 0 ? <NewLocationDialog types={types} /> : undefined}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-sky-600 p-2.5 text-white">
-            <Boxes className="size-6" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-foreground">
-              Görsel 2D/3D Arşiv Simülatörü & Raylı Dolap Modelleme
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Kompakt raylı dolapları hareket ettirin, dikey rafları ve Haritada Gör (CBS) mekansal kadastro eşleşmesini inceleyin.
-            </p>
-          </div>
-        </div>
-        <Link
-          href="/arsiv-simulatoru"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors"
-        >
-          <span>Simülatörü Başlat →</span>
-        </Link>
-      </div>
+      <nav aria-label="Fiziksel arşiv araçları" className="grid gap-3 sm:grid-cols-2">
+        <Link href="/dosya-islemleri" className="rounded-xl border border-border bg-card p-4 hover:bg-muted/40"><span className="text-sm font-semibold">Fiziksel dosyalar →</span><p className="mt-1 text-xs leading-5 text-muted-foreground">Klasörleri bulun, konumlarını kontrol edin ve taşıma işlemlerine erişin.</p></Link>
+        <Link href="/arsiv-simulatoru" className="rounded-xl border border-border bg-card p-4 hover:bg-muted/40"><span className="text-sm font-semibold">Görsel arşiv yerleşimi →</span><p className="mt-1 text-xs leading-5 text-muted-foreground">Arşiv yerleşimini simülatörde inceleyin.</p></Link>
+        {canManage && <Link href="/tanimlamalar/yerlesim-seviyeleri" className="rounded-xl border border-border bg-card p-4 hover:bg-muted/40 sm:col-span-2"><span className="text-sm font-semibold">Arşiv yerleşim seviyeleri →</span><p className="mt-1 text-xs leading-5 text-muted-foreground">Bina, oda, dolap, raf kalıbını düzenleyin; ihtiyacınız olan seviye yoksa buradan ekleyin.</p></Link>}
+      </nav>
 
       <section aria-label="Kapasite özeti" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
@@ -67,7 +56,7 @@ export default async function ArsivYerlesimiPage() {
         <StatTile
           label="Doluluk"
           value={occupancy}
-          hint={`${totalFolders} / ${totalCapacity} dosya`}
+          hint={totalCapacity ? `${totalFolders} dosya / ${totalCapacity} kapasite` : "Kapasite tanımlanmamış"}
           icon={Percent}
           tone={occupancy !== null && occupancy >= 85 ? "warning" : "neutral"}
         />
@@ -80,12 +69,12 @@ export default async function ArsivYerlesimiPage() {
         />
       </section>
 
-      <OccupancyTree locations={locations} />
+      <OccupancyTree locations={locations} types={types} canManage={canManage} />
 
       <p className="text-xs text-muted-foreground">
         Doluluk, bir konuma doğrudan yerleştirilmiş dosya sayısının kapasiteye
-        oranıdır; üst düğümlerde alt birimlerin toplamı gösterilir. Barkod/QR
-        etiket üretimi ve termal yazıcıya gönderme henüz yazılmadı.
+        oranıdır; üst düğümlerde alt birimlerin toplamı gösterilir.
+        {canManage ? " Bir konumu silmek yalnız altında konum ve içinde dosya yoksa mümkündür; kullanımdan çıkarmak için pasife alın." : ""}
       </p>
     </div>
   );

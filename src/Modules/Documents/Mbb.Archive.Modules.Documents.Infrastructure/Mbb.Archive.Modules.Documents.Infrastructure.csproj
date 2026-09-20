@@ -18,5 +18,6 @@
     <ProjectReference Include="../Mbb.Archive.Modules.Documents.Application/Mbb.Archive.Modules.Documents.Application.csproj" />
     <ProjectReference Include="../Mbb.Archive.Modules.Documents.Domain/Mbb.Archive.Modules.Documents.Domain.csproj" />
       <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Observability/Mbb.Archive.BuildingBlocks.Observability.csproj" />
+    <ProjectReference Include="../../Classification/Mbb.Archive.Modules.Classification.Contracts/Mbb.Archive.Modules.Classification.Contracts.csproj" />
   </ItemGroup>
 </Project>

@@ -2,8 +2,8 @@ using Mbb.Archive.BuildingBlocks.Application;
 
 namespace Mbb.Archive.Modules.Documents.Application.Documents.GetContent;
 
-/// <summary>Belgenin en güncel versiyonunun orijinal içeriğini okumak için istek.</summary>
-public sealed record GetDocumentContentQuery(Guid DocumentId)
+/// <summary>Seçilen sürümün, belirtilmezse güncel sürümün orijinal içeriği.</summary>
+public sealed record GetDocumentContentQuery(Guid DocumentId, int? VersionNumber = null)
     : IQuery<DocumentContent>;
 
 public sealed record DocumentVersionContentDescriptor(
@@ -11,7 +11,8 @@ public sealed record DocumentVersionContentDescriptor(
     string StorageKey,
     string MimeType,
     long SizeBytes,
-    string Sha256Hash);
+    string Sha256Hash,
+    string? StorageVersionId = null);
 
 /// <summary>Stream'in sahipliği çağırana aittir; response yazıldıktan sonra dispose edilir.</summary>
 public sealed record DocumentContent(

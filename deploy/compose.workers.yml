@@ -19,8 +19,8 @@ services:
       ORIGINAL_STORAGE_ROOT: /data/originals
       ARTIFACT_STORAGE_ROOT: /data/artifacts
     volumes:
-      - ../.local-data/originals:/data/originals:ro
-      - ../.local-data/artifacts:/data/artifacts
+      - ${ARCHIVE_ORIGINALS_PATH:-../.local-data/originals}:/data/originals:ro
+      - ${ARCHIVE_ARTIFACTS_PATH:-../.local-data/artifacts}:/data/artifacts
 
   ocr-worker:
     build:
@@ -37,11 +37,31 @@ services:
       ARTIFACT_STORAGE_ROOT: /data/artifacts
       OCR_PROVIDER: ${OCR_PROVIDER:-tesseract}
       OCR_LANGUAGES: ${OCR_LANGUAGES:-tur+eng}
-      OCR_RENDER_DPI: ${OCR_RENDER_DPI:-200}
+      OCR_RENDER_DPI: ${OCR_RENDER_DPI:-300}
       OCR_SEARCHABLE_PDF_ENABLED: ${OCR_SEARCHABLE_PDF_ENABLED:-false}
     volumes:
-      - ../.local-data/originals:/data/originals:ro
-      - ../.local-data/artifacts:/data/artifacts
+      - ${ARCHIVE_ORIGINALS_PATH:-../.local-data/originals}:/data/originals:ro
+      - ${ARCHIVE_ARTIFACTS_PATH:-../.local-data/artifacts}:/data/artifacts
+
+  text-worker:
+    build:
+      context: ..
+      dockerfile: deploy/docker/text-worker.Dockerfile
+    container_name: mbb-archive-text-worker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: mbb-archive-rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:?RABBITMQ_DEFAULT_USER is required}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS is required}
+      STORAGE_PROVIDER: local
+      ORIGINAL_STORAGE_ROOT: /data/originals
+      ARTIFACT_STORAGE_ROOT: /data/artifacts
+      OCR_LANGUAGES: ${OCR_LANGUAGES:-tur+eng}
+      OCR_RENDER_DPI: ${OCR_RENDER_DPI:-300}
+      OFFICE_CONVERSION_TIMEOUT_SECONDS: ${OFFICE_CONVERSION_TIMEOUT_SECONDS:-120}
+    volumes:
+      - ${ARCHIVE_ORIGINALS_PATH:-../.local-data/originals}:/data/originals:ro
+      - ${ARCHIVE_ARTIFACTS_PATH:-../.local-data/artifacts}:/data/artifacts
 
 networks:
   default:

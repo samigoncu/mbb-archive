@@ -8,7 +8,17 @@ public interface IPhysicalArchiveRepository
 {
     Task AddLocationAsync(ArchiveLocation location, CancellationToken cancellationToken);
     Task<ArchiveLocation?> GetLocationAsync(Guid id, CancellationToken cancellationToken);
-    Task<bool> IdentityExistsAsync(string code, string barcode, CancellationToken cancellationToken);
+    /// <param name="excludeId">Güncellemede kaydın kendi kodu çakışma sayılmasın diye dışarıda bırakılır.</param>
+    Task<bool> IdentityExistsAsync(string code, string barcode, CancellationToken cancellationToken, Guid? excludeId = null);
+    Task<bool> LocationHasChildrenAsync(Guid id, CancellationToken cancellationToken);
+    Task<int> FolderCountAtLocationAsync(Guid id, CancellationToken cancellationToken);
+    void RemoveLocation(ArchiveLocation location);
+
+    Task<IReadOnlyList<ArchiveLocationTypeDefinition>> GetLocationTypesAsync(CancellationToken cancellationToken);
+    Task<ArchiveLocationTypeDefinition?> GetLocationTypeAsync(string code, CancellationToken cancellationToken);
+    Task<int> LocationCountByTypeAsync(string code, CancellationToken cancellationToken);
+    Task AddLocationTypeAsync(ArchiveLocationTypeDefinition definition, CancellationToken cancellationToken);
+    void RemoveLocationType(ArchiveLocationTypeDefinition definition);
 
     Task AddFolderAsync(PhysicalFolder folder, CancellationToken cancellationToken);
     Task<PhysicalFolder?> GetFolderAsync(Guid id, CancellationToken cancellationToken);

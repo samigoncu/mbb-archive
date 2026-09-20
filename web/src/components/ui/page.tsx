@@ -35,6 +35,7 @@ export function Panel({
   children,
   padded = false,
   className,
+  id,
 }: {
   title?: string;
   description?: string;
@@ -42,9 +43,12 @@ export function Panel({
   children: ReactNode;
   padded?: boolean;
   className?: string;
+  /** Sayfa içi bağlantı hedefi; eylem düğmeleri buraya kaydırır. */
+  id?: string;
 }) {
   return (
     <section
+      id={id}
       className={cn(
         "overflow-hidden rounded-lg border border-border bg-card shadow-flat",
         className,

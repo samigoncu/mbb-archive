@@ -19,4 +19,8 @@ public interface IProcessingJobRepository
     Task<ProcessingJob?> GetByDocumentVersionIdAsync(
         Guid documentVersionId,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ProcessingJob>> GetAwaitingIndexJobsByDocumentIdAsync(
+        Guid documentId,
+        CancellationToken cancellationToken);
 }

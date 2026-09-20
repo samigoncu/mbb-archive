@@ -117,6 +117,16 @@ public sealed class WorkflowInstance : AggregateRoot<Guid>
         ConcurrencyVersion++;
     }
 
+    public void AssignTask(Guid workItemId, string subject, string assignedBy, long expectedVersion, DateTimeOffset now)
+    {
+        if (ConcurrencyVersion != expectedVersion)
+            throw new DomainRuleViolationException("Görev değişmiş. Listeyi yenileyin.");
+        var item = _workItems.SingleOrDefault(x => x.Id == workItemId && x.NodeId == CurrentNodeId && x.Status != WorkflowWorkItemStatus.Completed)
+            ?? throw new DomainRuleViolationException("Atanabilecek açık görev bulunamadı.");
+        item.Assign(subject, assignedBy, now);
+        ConcurrencyVersion++;
+    }
+
     public void CompleteCurrentTask(
         string completedBy,
         string outcome,
@@ -131,6 +141,7 @@ public sealed class WorkflowInstance : AggregateRoot<Guid>
 
         workItem.Complete(completedBy, outcome, now);
         SetVariables(variables);
+        SetVariables(new Dictionary<string,string> { ["outcome"] = outcome });
     }
 
     public void CompleteExternalTask(
@@ -234,6 +245,15 @@ public sealed class WorkflowWorkItem : Entity<Guid>
     public DateTimeOffset? CompletedAt { get; private set; }
     public string? CompletedBy { get; private set; }
     public string? Outcome { get; private set; }
+    public string? AssigneeSubjectId { get; private set; }
+    public string? AssignedBy { get; private set; }
+    public DateTimeOffset? AssignedAt { get; private set; }
+    internal void Assign(string subject, string assignedBy, DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(subject) || subject.Length > 300)
+            throw new DomainRuleViolationException("Geçerli personel seçin.");
+        AssigneeSubjectId = subject.Trim(); AssignedBy = assignedBy; AssignedAt = now;
+    }
     public int EscalationLevel { get; private set; }
 
     internal void Complete(

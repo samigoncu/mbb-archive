@@ -52,7 +52,12 @@ public static class ProcessingModule
             .Validate(options => options.BatchSize is > 0 and <= 500, "Processing Outbox batch size must be between 1 and 500.")
             .ValidateOnStart();
 
+        services.Configure<Previews.PreviewArtifactOptions>(configuration.GetSection(Previews.PreviewArtifactOptions.SectionName));
+        services.AddScoped<Mbb.Archive.Modules.Processing.Application.Previews.IPreviewArtifactStore, Previews.PreviewArtifactStore>();
+        services.AddScoped<Mbb.Archive.Modules.Processing.Application.Previews.DocumentPreviewHandler>();
+        services.AddScoped<Mbb.Archive.Modules.Processing.Application.Previews.DocumentVersionTextHandler>();
         services.AddScoped<IProcessingJobRepository, EfProcessingJobRepository>();
+        services.AddScoped<Mbb.Archive.Modules.Processing.Contracts.IProcessedVersionArtifacts, ProcessedVersionArtifactsSource>();
         services.AddScoped<IProcessingQueries, EfProcessingQueries>();
         services.AddScoped<ProcessingOutboxStore>();
 
@@ -66,8 +71,10 @@ public static class ProcessingModule
             sp => sp.GetRequiredService<ProcessingDbContext>());
 
         services.AddScoped<StartProcessingCommandHandler>();
+        services.AddScoped<Mbb.Archive.Modules.Processing.Application.Jobs.Reprocess.ReprocessDocumentHandler>();
         services.AddScoped<ApplyPdfInspectionResultCommandHandler>();
         services.AddScoped<ApplyOcrResultCommandHandler>();
+        services.AddScoped<ApplyTextExtractionResultCommandHandler>();
         services.AddScoped<FailProcessingCommandHandler>();
         services.AddScoped<GetProcessingJobByIdQueryHandler>();
         services.AddScoped<MarkSearchIndexedCommandHandler>();

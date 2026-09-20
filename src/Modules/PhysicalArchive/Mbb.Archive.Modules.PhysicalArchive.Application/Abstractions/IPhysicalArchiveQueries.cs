@@ -34,7 +34,12 @@ public sealed record LocationOccupancyItem(
     string Name,
     string Barcode,
     int? Capacity,
-    int FolderCount);
+    int FolderCount,
+    bool IsActive,
+    string TypeName = "",
+    int Level = 0,
+    bool CanStoreFolder = false,
+    bool AllowsCapacity = false);
 
 /// <summary>Ödünç listesi filtresi. `OverdueOnly` iade edilmemiş ve süresi geçmişleri seçer.</summary>
 public sealed record LoanFilter(
@@ -58,7 +63,9 @@ public sealed record LoanDetailsItem(
     DateTimeOffset DueAt,
     DateTimeOffset? ReturnedAt,
     bool IsOverdue,
-    int DaysOverdue);
+    int DaysOverdue,
+    string? ReturnNote = null,
+    string? CheckedOutBy = null);
 
 public sealed record LocationListItem(
     Guid Id,
@@ -67,7 +74,11 @@ public sealed record LocationListItem(
     string Code,
     string Name,
     string Barcode,
-    bool IsActive);
+    bool IsActive,
+    /// <summary>Seviyenin görünen adı; arayüz etiketi katalogdan gelir.</summary>
+    string TypeName = "",
+    /// <summary>Bu konuma doğrudan klasör konulabilir mi.</summary>
+    bool CanStoreFolder = false);
 
 /// <summary>Klasör listesi filtresi. Tüm alanlar opsiyoneldir; boş filtre tüm klasörleri sayfalar.</summary>
 public sealed record FolderFilter(
@@ -77,7 +88,7 @@ public sealed record FolderFilter(
     Guid? LocationId = null,
     string? Status = null,
     int? Year = null,
-    Guid? ContainsDocumentId = null);
+    Guid? ContainsDocumentId = null, Guid? OwnerUnitId = null, Guid? DigitalDossierId = null);
 
 public sealed record FolderListItem(
     Guid Id,
@@ -90,7 +101,7 @@ public sealed record FolderListItem(
     string Status,
     int DocumentCount,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? LastMovedAt);
+    DateTimeOffset? LastMovedAt, Guid? OwnerUnitId = null, Guid? DigitalDossierId = null);
 
 public sealed record FolderDetails(
     Guid Id,
@@ -99,7 +110,11 @@ public sealed record FolderDetails(
     string FilePlanCode,
     Guid LocationId,
     string Status,
-    IReadOnlyList<Guid> DocumentIds);
+    IReadOnlyList<Guid> DocumentIds, Guid? OwnerUnitId = null, Guid? DigitalDossierId = null,
+    IReadOnlyList<PhysicalDispositionDetails>? Dispositions = null);
+
+public sealed record PhysicalDispositionDetails(Guid DocumentId, Guid ProcessId, DateTimeOffset ExecutedAt,
+    string Actor, string ProtocolReference, Guid EvidenceDocumentId);
 
 public sealed record LoanListItem(
     Guid Id,

@@ -54,7 +54,7 @@ services:
       SecurityScan__ClamAvHost: clamav
       SecurityScan__ClamAvPort: 3310
     volumes:
-      - mbb_archive_staging:/data/staging:ro
+      - ${ARCHIVE_STAGING_PATH:-../.local-data/staging}:/data/staging:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -73,8 +73,29 @@ services:
       ORIGINAL_STORAGE_ROOT: /data/originals
       ARTIFACT_STORAGE_ROOT: /data/artifacts
     volumes:
-      - mbb_archive_originals:/data/originals:ro
-      - mbb_archive_artifacts:/data/artifacts
+      - ${ARCHIVE_ORIGINALS_PATH:-../.local-data/originals}:/data/originals:ro
+      - ${ARCHIVE_ARTIFACTS_PATH:-../.local-data/artifacts}:/data/artifacts
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  text-worker:
+    build:
+      context: ..
+      dockerfile: deploy/docker/text-worker.Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      STORAGE_PROVIDER: local
+      ORIGINAL_STORAGE_ROOT: /data/originals
+      ARTIFACT_STORAGE_ROOT: /data/artifacts
+      OCR_LANGUAGES: ${OCR_LANGUAGES:-tur+eng}
+      OCR_RENDER_DPI: ${OCR_RENDER_DPI:-300}
+      OFFICE_CONVERSION_TIMEOUT_SECONDS: ${OFFICE_CONVERSION_TIMEOUT_SECONDS:-120}
+    volumes:
+      - ${ARCHIVE_ORIGINALS_PATH:-../.local-data/originals}:/data/originals:ro
+      - ${ARCHIVE_ARTIFACTS_PATH:-../.local-data/artifacts}:/data/artifacts
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -95,8 +116,8 @@ services:
       OCR_RENDER_DPI: 200
       OCR_SEARCHABLE_PDF_ENABLED: "false"
     volumes:
-      - mbb_archive_originals:/data/originals:ro
-      - mbb_archive_artifacts:/data/artifacts
+      - ${ARCHIVE_ORIGINALS_PATH:-../.local-data/originals}:/data/originals:ro
+      - ${ARCHIVE_ARTIFACTS_PATH:-../.local-data/artifacts}:/data/artifacts
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -132,10 +153,30 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4317
       OTEL_SERVICE_NAME: Mbb.Archive.Api
       ConnectionStrings__Documents: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Processing: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Classification: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Search: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Archive: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Retention: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__AccessControl: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Audit: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Collections: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Geo: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Workflow: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__PhysicalArchive: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Evidence: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__OfficialCorrespondence: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Operations: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Organization: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      # Sır şifreleme anahtarları kalıcı birimde durmalı: kap yeniden
+      # oluşturulduğunda kaybolursa LDAP ve CBS parolaları çözülemez.
+      DataProtection__KeyRingPath: /data/keys
       Documents__FileStaging__RootPath: /data/staging
       Search__OpenSearch__BaseUrl: http://opensearch:9200
       Search__Artifacts__Provider: Local
       Search__Artifacts__LocalRootPath: /data/artifacts
+      Processing__Artifacts__Provider: Local
+      Processing__Artifacts__LocalRootPath: /data/artifacts
       Documents__OriginalStorage__Provider: Local
       Documents__OriginalStorage__LocalRootPath: /data/originals
       RabbitMq__HostName: rabbitmq
@@ -144,10 +185,15 @@ services:
       RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS}
     ports:
       - "5080:8080"
+    # Adlandırılmış birim yerine bağlama (bind mount): adlandırılmış birim
+    # /var/lib/docker/volumes altına, yani kök diske düşer ve arşiv için ayrı
+    # bir disk bağlamak imkânsız hâle gelir. Yol .env'den gelir; üretimde
+    # originals kendi diskine bağlanır, geliştirmede depo içinde kalır.
     volumes:
-      - mbb_archive_staging:/data/staging
-      - mbb_archive_originals:/data/originals
-      - mbb_archive_artifacts:/data/artifacts
+      - ${ARCHIVE_KEYS_PATH:-../.local-data/keys}:/data/keys
+      - ${ARCHIVE_STAGING_PATH:-../.local-data/staging}:/data/staging
+      - ${ARCHIVE_ORIGINALS_PATH:-../.local-data/originals}:/data/originals
+      - ${ARCHIVE_ARTIFACTS_PATH:-../.local-data/artifacts}:/data/artifacts
     depends_on:
       postgres:
         condition: service_healthy
@@ -166,11 +212,11 @@ services:
     depends_on:
       - api
 
+# Arşiv dizinleri burada tanımlı değildir: bağlama ile host üzerinden gelirler.
+# Aşağıdakiler uygulamanın kendi üretemeyeceği durum bilgisi olmayan, yeniden
+# kurulabilir servis verileridir.
 volumes:
   mbb_archive_postgres:
   mbb_archive_rabbitmq:
   mbb_archive_clamav_db:
-  mbb_archive_staging:
-  mbb_archive_originals:
-  mbb_archive_artifacts:
   mbb_archive_opensearch:

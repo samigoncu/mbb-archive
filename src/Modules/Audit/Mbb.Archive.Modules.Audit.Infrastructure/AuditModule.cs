@@ -22,6 +22,9 @@ public static class AuditModule
             options => options.UseNpgsql(connectionString));
 
         services.AddSingleton(TimeProvider.System);
+        services.AddScoped<AuditJournalQueries>();
+        services.AddScoped<AuditJournalWriter>();
+        services.AddScoped<Mbb.Archive.BuildingBlocks.Application.Auditing.IAccessAuditor, PersistentAccessAuditor>();
         services.AddHostedService<AuditEventConsumer>();
 
         services.AddScoped<

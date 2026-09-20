@@ -132,6 +132,8 @@ public sealed class OperationsCommandHandlers :
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
+        catch (ConcurrencyConflictException ex)
+        { return Result.Failure(Error.Conflict("operations.recovery_drill_conflict", ex.Message)); }
         catch (DomainRuleViolationException ex)
         {
             return Result.Failure(
@@ -176,6 +178,8 @@ public sealed class OperationsCommandHandlers :
 
             return Result.Success();
         }
+        catch (ConcurrencyConflictException ex)
+        { return Result.Failure(Error.Conflict("operations.recovery_drill_conflict", ex.Message)); }
         catch (DomainRuleViolationException ex)
         {
             return Result.Failure(

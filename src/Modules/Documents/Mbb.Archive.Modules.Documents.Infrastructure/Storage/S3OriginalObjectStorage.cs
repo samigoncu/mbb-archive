@@ -13,7 +13,7 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Storage;
 /// AWS S3 veya S3-compatible storage adapter'ı.
 /// Bucket tarafında versioning + Object Lock/WORM policy deployment sorumluluğudur.
 /// </summary>
-internal sealed class S3OriginalObjectStorage : IOriginalObjectStorage
+internal sealed partial class S3OriginalObjectStorage : IOriginalObjectStorage, IOriginalProtectionStorage
 {
     private readonly OriginalStorageOptions _options;
     private readonly IAmazonS3 _client;
@@ -36,10 +36,12 @@ internal sealed class S3OriginalObjectStorage : IOriginalObjectStorage
 
         if (await ExistsAsync(key, expectedSizeBytes, cancellationToken))
         {
+            var existing = await _client.GetObjectMetadataAsync(new GetObjectMetadataRequest
+                { BucketName = _options.S3.BucketName, Key = key }, cancellationToken);
             return new StoredOriginalDescriptor(
                 key,
                 expectedSizeBytes,
-                sha256Hash.ToLowerInvariant());
+                sha256Hash.ToLowerInvariant(), RealVersion(existing.VersionId));
         }
 
         var request = new PutObjectRequest
@@ -53,17 +55,44 @@ internal sealed class S3OriginalObjectStorage : IOriginalObjectStorage
 
         request.Metadata["sha256"] = sha256Hash.ToLowerInvariant();
 
-        await _client.PutObjectAsync(request, cancellationToken);
+        ApplyObjectLock(request);
+
+        var stored = await _client.PutObjectAsync(request, cancellationToken);
 
         return new StoredOriginalDescriptor(
             key,
             expectedSizeBytes,
-            sha256Hash.ToLowerInvariant());
+            sha256Hash.ToLowerInvariant(), RealVersion(stored.VersionId));
     }
 
 
-    public async Task<Stream?> OpenReadAsync(
+    /// <summary>
+    /// §3.1 WORM. Bucket'ta Object Lock etkinse nesne, saklama süresi
+    /// dolmadan silinemez ve üzerine yazılamaz hale gelir. Kapalıyken
+    /// istek değiştirilmez ve mevcut davranış korunur.
+    /// </summary>
+    private void ApplyObjectLock(PutObjectRequest request)
+    {
+        var worm = _options.Worm;
+
+        if (!worm.Enabled)
+            return;
+
+        request.ObjectLockMode =
+            string.Equals(worm.Mode, "Compliance", StringComparison.OrdinalIgnoreCase)
+                ? ObjectLockMode.Compliance
+                : ObjectLockMode.Governance;
+
+        request.ObjectLockRetainUntilDate =
+            DateTime.UtcNow.AddDays(Math.Max(worm.RetentionDays, 1));
+    }
+
+    public Task<Stream?> OpenReadAsync(
         string storageKey,
+        CancellationToken cancellationToken)
+        => OpenReadVersionAsync(storageKey, null, cancellationToken);
+
+    public async Task<Stream?> OpenReadVersionAsync(string storageKey, string? storageVersionId,
         CancellationToken cancellationToken)
     {
         try
@@ -73,7 +102,8 @@ internal sealed class S3OriginalObjectStorage : IOriginalObjectStorage
                 new GetObjectRequest
                 {
                     BucketName = _options.S3.BucketName,
-                    Key = storageKey
+                    Key = storageKey,
+                    VersionId = storageVersionId
                 },
                 cancellationToken);
 

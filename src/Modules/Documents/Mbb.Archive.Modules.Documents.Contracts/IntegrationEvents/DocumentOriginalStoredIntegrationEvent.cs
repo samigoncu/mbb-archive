@@ -12,7 +12,13 @@ public sealed record DocumentOriginalStoredIntegrationEvent(
     string Sha256Hash,
     long SizeBytes,
     string MimeType,
-    DateTimeOffset OccurredAt) : IIntegrationEvent
+    DateTimeOffset OccurredAt,
+    /// <param name="OwnerUnitPath">
+    /// Belgenin sahibi birimin gerçekleşmiş yolu. Arşiv modülü kapsam
+    /// süzgecini kendi tablosunda uygulayabilmek için bunu saklar; sahibi
+    /// belirlenmemiş belgede null kalır.
+    /// </param>
+    string? OwnerUnitPath = null) : IIntegrationEvent
 {
     public string EventName => "documents.original-stored.v1";
 }

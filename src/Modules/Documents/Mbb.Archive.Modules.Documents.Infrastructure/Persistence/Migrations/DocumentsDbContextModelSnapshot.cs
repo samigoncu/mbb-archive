@@ -33,6 +33,34 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("archived_at");
 
+                    b.Property<string>("CancellationOperationActor")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("cancellation_operation_actor");
+
+                    b.Property<Guid?>("CancellationOperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cancellation_operation_id");
+
+                    b.Property<string>("CancellationOperationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("cancellation_operation_reason");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<string>("CancelledBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("cancelled_by");
+
                     b.Property<long>("ConcurrencyVersion")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint")
@@ -42,11 +70,38 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int?>("CurrentVersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_version_number");
+
+                    b.Property<Guid?>("DossierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("dossier_id");
+
+                    b.Property<string>("FilePlanCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("file_plan_code");
+
+                    b.Property<Guid?>("OwnerUnitId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_unit_id");
+
+                    b.Property<string>("OwnerUnitPath")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("owner_unit_path");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("status");
+
+                    b.Property<string>("StatusBeforeCancellation")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("status_before_cancellation");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -58,6 +113,14 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_documents_created_at");
+
+                    b.HasIndex("DossierId");
+
+                    b.HasIndex("FilePlanCode")
+                        .HasDatabaseName("ix_documents_file_plan_code");
+
+                    b.HasIndex("OwnerUnitPath")
+                        .HasDatabaseName("ix_documents_owner_unit_path");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_documents_status");
@@ -71,9 +134,33 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<Guid?>("CancellationRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cancellation_request_id");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<string>("CancelledBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("cancelled_by");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
 
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uuid")
@@ -84,6 +171,32 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("mime_type");
+
+                    b.Property<bool>("OwnsStorageLegalHold")
+                        .HasColumnType("boolean")
+                        .HasColumnName("owns_storage_legal_hold");
+
+                    b.Property<DateTimeOffset?>("ProtectedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("protected_until");
+
+                    b.Property<DateTimeOffset?>("ProtectionCheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("protection_checked_at");
+
+                    b.Property<string>("ProtectionError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("protection_error");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<int?>("ReplacementVersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("replacement_version_number");
 
                     b.Property<string>("Sha256Hash")
                         .IsRequired()
@@ -102,6 +215,15 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("storage_key");
 
+                    b.Property<bool>("StorageLegalHold")
+                        .HasColumnType("boolean")
+                        .HasColumnName("storage_legal_hold");
+
+                    b.Property<string>("StorageVersionId")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("storage_version_id");
+
                     b.Property<int>("VersionNumber")
                         .HasColumnType("integer")
                         .HasColumnName("version_number");
@@ -116,6 +238,63 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ux_document_versions_document_version");
 
                     b.ToTable("document_versions", "documents");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Documents.Domain.Dossiers.DigitalDossier", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FilePlanCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("file_plan_code");
+
+                    b.Property<Guid>("FilePlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_plan_id");
+
+                    b.Property<Guid>("FilePlanItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_plan_item_id");
+
+                    b.Property<string>("FilePlanTitle")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("file_plan_title");
+
+                    b.Property<string>("FilePlanVersion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("file_plan_version");
+
+                    b.Property<Guid>("OwnerUnitId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_unit_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUnitId", "FilePlanId", "FilePlanCode", "Year");
+
+                    b.ToTable("digital_dossiers", "documents");
                 });
 
             modelBuilder.Entity("Mbb.Archive.Modules.Documents.Domain.Ingestions.DocumentFileIngestion", b =>
@@ -211,6 +390,17 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("stored_size_bytes");
 
+                    b.Property<string>("SubmittedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("submitted_by");
+
+                    b.Property<string>("VersionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("version_reason");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DocumentId")
@@ -223,6 +413,101 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_file_ingestions_status");
 
                     b.ToTable("file_ingestions", "documents");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Documents.Domain.Relations.DocumentRelation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTimeOffset>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SourceDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetDocumentId");
+
+                    b.HasIndex("SourceDocumentId", "TargetDocumentId", "Kind")
+                        .IsUnique()
+                        .HasDatabaseName("ux_document_relations_active_pair")
+                        .HasFilter("\"RemovedAt\" IS NULL");
+
+                    b.ToTable("document_relations", "documents");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Documents.Domain.Settings.UploadPolicy", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<int>("MaxFileSizeMb")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_file_size_mb");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("upload_policy", "documents");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            MaxFileSizeMb = 200,
+                            UpdatedBy = "system",
+                            Version = 1L
+                        });
                 });
 
             modelBuilder.Entity("Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Inbox.InboxMessage", b =>
@@ -309,6 +594,14 @@ namespace Mbb.Archive.Modules.Documents.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_outbox_dispatch");
 
                     b.ToTable("outbox_messages", "documents");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Documents.Domain.Documents.Document", b =>
+                {
+                    b.HasOne("Mbb.Archive.Modules.Documents.Domain.Dossiers.DigitalDossier", null)
+                        .WithMany()
+                        .HasForeignKey("DossierId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Mbb.Archive.Modules.Documents.Domain.Documents.DocumentVersion", b =>

@@ -36,14 +36,43 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.Property(x => x.ArchivedAt)
             .HasColumnName("archived_at");
 
+        builder.Property(x => x.OwnerUnitId)
+            .HasColumnName("owner_unit_id");
+
+        // Kapsam süzgeci bu sütunda önek eşleşmesi yapar.
+        builder.Property(x => x.OwnerUnitPath)
+            .HasColumnName("owner_unit_path")
+            .HasMaxLength(1000);
+
+        builder.Property(x => x.FilePlanCode)
+            .HasColumnName("file_plan_code")
+            .HasMaxLength(100);
+
         builder.Property(x => x.ConcurrencyVersion)
             .HasColumnName("concurrency_version")
             .IsConcurrencyToken();
 
+        builder.Property(x => x.DossierId).HasColumnName("dossier_id");
+        builder.Property(x => x.CurrentVersionNumber).HasColumnName("current_version_number");
+        builder.HasOne<Mbb.Archive.Modules.Documents.Domain.Dossiers.DigitalDossier>()
+            .WithMany().HasForeignKey(x => x.DossierId).OnDelete(DeleteBehavior.Restrict);
+        builder.Property(x => x.StatusBeforeCancellation).HasColumnName("status_before_cancellation").HasConversion<string>().HasMaxLength(40);
+        builder.Property(x => x.CancelledAt).HasColumnName("cancelled_at");
+        builder.Property(x => x.CancelledBy).HasColumnName("cancelled_by").HasMaxLength(200);
+        builder.Property(x => x.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(1000);
+        builder.Property(x => x.CancellationOperationId).HasColumnName("cancellation_operation_id");
+        builder.Property(x => x.CancellationOperationActor).HasColumnName("cancellation_operation_actor").HasMaxLength(200);
+        builder.Property(x => x.CancellationOperationReason).HasColumnName("cancellation_operation_reason").HasMaxLength(1000);
         builder.Ignore(x => x.DomainEvents);
 
         builder.HasIndex(x => x.CreatedAt)
             .HasDatabaseName("ix_documents_created_at");
+
+        builder.HasIndex(x => x.OwnerUnitPath)
+            .HasDatabaseName("ix_documents_owner_unit_path");
+
+        builder.HasIndex(x => x.FilePlanCode)
+            .HasDatabaseName("ix_documents_file_plan_code");
 
         builder.HasIndex(x => x.Status)
             .HasDatabaseName("ix_documents_status");

@@ -16,13 +16,16 @@ internal sealed class LocalFileStagingService : IFileStagingService
 
     private readonly FileStagingOptions _options;
     private readonly TimeProvider _timeProvider;
+    private readonly Mbb.Archive.Modules.Documents.Application.Settings.IUploadPolicyStore _policy;
 
     public LocalFileStagingService(
         IOptions<FileStagingOptions> options,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        Mbb.Archive.Modules.Documents.Application.Settings.IUploadPolicyStore policy)
     {
         _options = options.Value;
         _timeProvider = timeProvider;
+        _policy = policy;
     }
 
     public async Task<StagedFileDescriptor> StageAsync(
@@ -35,6 +38,8 @@ internal sealed class LocalFileStagingService : IFileStagingService
         if (!source.CanRead)
             throw new FileStagingRejectedException("Upload stream is not readable.");
 
+        var policy = await _policy.GetAsync(cancellationToken);
+        var maxBytes = Math.Min(_options.MaxUploadBytes, policy.MaxFileSizeMb * 1024L * 1024);
         var today = _timeProvider.GetUtcNow();
         var relativeKey = $"{today:yyyy/MM/dd}/{ingestionId.Value:N}.bin";
 
@@ -70,10 +75,10 @@ internal sealed class LocalFileStagingService : IFileStagingService
 
                     totalBytes += read;
 
-                    if (totalBytes > _options.MaxUploadBytes)
+                    if (totalBytes > maxBytes)
                     {
                         throw new FileStagingRejectedException(
-                            $"Upload exceeds the configured {_options.MaxUploadBytes} byte limit.");
+                            $"Upload exceeds the configured {maxBytes} byte limit.");
                     }
 
                     hash.AppendData(buffer, 0, read);

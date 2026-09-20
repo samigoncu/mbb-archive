@@ -25,12 +25,14 @@ public static class PhysicalArchiveModule
             options => options.UseNpgsql(connectionString));
 
         services.AddSingleton(TimeProvider.System);
+        services.AddScoped<Mbb.Archive.Modules.PhysicalArchive.Contracts.IDocumentPhysicalFiling, DocumentPhysicalFiling>();
         services.AddScoped<IPhysicalArchiveRepository, EfPhysicalArchiveRepository>();
         services.AddScoped<IPhysicalArchiveQueries, EfPhysicalArchiveQueries>();
         services.AddScoped<IUnitOfWork<PhysicalArchiveBoundary>>(
             sp => sp.GetRequiredService<PhysicalArchiveDbContext>());
         services.AddScoped<IOutbox<PhysicalArchiveBoundary>>(
             sp => sp.GetRequiredService<PhysicalArchiveDbContext>());
+        services.AddScoped<PhysicalFolderAccess>();
         services.AddScoped<PhysicalArchiveCommandHandlers>();
         services.AddScoped<PhysicalArchiveQueryHandlers>();
         services.AddHostedService<PhysicalArchiveOutboxPublisher>();
@@ -39,6 +41,9 @@ public static class PhysicalArchiveModule
             Mbb.Archive.BuildingBlocks.Observability.IOperationalSnapshotContributor,
             PhysicalArchiveOperationalSnapshotContributor>();
 
+        services.AddScoped<Mbb.Archive.BuildingBlocks.Application.Security.IOrganizationUnitUsage, PhysicalUnitUsage>();
+        services.AddScoped<Mbb.Archive.BuildingBlocks.Application.Security.IFilePlanCodeUsage, PhysicalFilePlanUsage>();
+        services.AddScoped<Mbb.Archive.Modules.PhysicalArchive.Contracts.IPhysicalDispositionGateway, Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.PhysicalDispositionGateway>();
         return services;
     }
 }

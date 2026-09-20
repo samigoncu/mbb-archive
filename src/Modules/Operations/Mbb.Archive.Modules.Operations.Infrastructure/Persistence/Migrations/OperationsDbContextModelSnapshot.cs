@@ -69,7 +69,17 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("RuleId")
+                        .IsUnique()
+                        .HasFilter("status <> 'Resolved'");
 
                     b.HasIndex("RuleId", "DeduplicationKey", "Status");
 
@@ -81,6 +91,10 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("BreachedSince")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("breached_since");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -106,11 +120,32 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_enabled");
 
+                    b.Property<DateTimeOffset?>("LastEvaluatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_evaluated_at");
+
+                    b.Property<string>("LastEvaluationError")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("last_evaluation_error");
+
                     b.Property<string>("Metric")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("metric");
+
+                    b.Property<string>("NotificationChannel")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("notification_channel");
+
+                    b.Property<string>("NotificationTarget")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notification_target");
 
                     b.Property<string>("Severity")
                         .IsRequired()
@@ -125,6 +160,12 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -133,15 +174,145 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                     b.ToTable("alert_rules", "operations");
                 });
 
+            modelBuilder.Entity("Mbb.Archive.Modules.Operations.Domain.Branding.BrandingAsset", b =>
+                {
+                    b.Property<string>("Kind")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("kind");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("content");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("file_name");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Kind");
+
+                    b.ToTable("branding_assets", "operations");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Operations.Domain.Branding.BrandingSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<string>("DepartmentName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("department_name");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("FaviconUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("favicon_url");
+
+                    b.Property<string>("InstitutionName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("institution_name");
+
+                    b.Property<string>("LoginImageUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("login_image_url");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("logo_url");
+
+                    b.Property<string>("SiteTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("site_title");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("branding", "operations");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DepartmentName = "Yazı İşleri ve Kararlar Dairesi Başkanlığı · Arşiv Şube Müdürlüğü",
+                            Description = "Kurumsal Belge, Arşiv ve Dijital Hafıza Platformu",
+                            InstitutionName = "T.C. MALATYA BÜYÜKŞEHİR BELEDİYESİ",
+                            SiteTitle = "MBB Kurumsal Arşiv",
+                            UpdatedBy = "system",
+                            Version = 1L
+                        });
+                });
+
             modelBuilder.Entity("Mbb.Archive.Modules.Operations.Domain.Notifications.NotificationDelivery", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("AlertId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("alert_id");
+
                     b.Property<int>("AttemptCount")
                         .HasColumnType("integer")
                         .HasColumnName("attempt_count");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("body");
 
                     b.Property<string>("Channel")
                         .IsRequired()
@@ -162,6 +333,12 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_attempt_at");
 
+                    b.Property<string>("ProviderReference")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("provider_reference");
+
                     b.Property<DateTimeOffset?>("SentAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("sent_at");
@@ -171,6 +348,12 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("subject");
+
                     b.Property<string>("Target")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -178,6 +361,8 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                         .HasColumnName("target");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status", "NextAttemptAt");
 
                     b.ToTable("notification_deliveries", "operations");
                 });
@@ -251,6 +436,12 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                     b.Property<int>("TargetRtoMinutes")
                         .HasColumnType("integer")
                         .HasColumnName("target_rto_minutes");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -449,6 +640,52 @@ namespace Mbb.Archive.Modules.Operations.Infrastructure.Persistence.Migrations
                     b.HasIndex("Kind", "StartedAt");
 
                     b.ToTable("verification_runs", "operations");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Operations.Infrastructure.Automation.OperationsAutomationEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("actor");
+
+                    b.Property<DateTimeOffset?>("AuditPublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("audit_published_at");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("detail");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.ToTable("automation_events", "operations");
                 });
 
             modelBuilder.Entity("Mbb.Archive.Modules.Operations.Domain.Alerts.AlertInstance", b =>

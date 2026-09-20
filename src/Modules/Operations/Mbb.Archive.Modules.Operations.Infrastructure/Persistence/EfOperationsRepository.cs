@@ -31,12 +31,12 @@ internal sealed class EfOperationsRepository :
         => _dbContext.AlertInstances.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
     public async Task<IReadOnlyList<AlertRuleDetails>> ListAlertRulesAsync(CancellationToken cancellationToken)
         => await _dbContext.AlertRules.AsNoTracking().OrderBy(x => x.Code).Select(x => new AlertRuleDetails(x.Id, x.Code,
-            x.Metric, x.Comparison.ToString(), x.Threshold, x.Severity.ToString(), x.EvaluationWindow, x.IsEnabled)).ToListAsync(cancellationToken);
+            x.Metric, x.Comparison.ToString(), x.Threshold, x.Severity.ToString(), x.EvaluationWindow, x.IsEnabled, x.NotificationChannel == null ? null : x.NotificationChannel.ToString(), x.NotificationTarget, x.LastEvaluatedAt, x.LastEvaluationError)).ToListAsync(cancellationToken);
     public async Task<IReadOnlyList<AlertInstanceDetails>> ListActiveAlertsAsync(int take, CancellationToken cancellationToken)
         => await _dbContext.AlertInstances.AsNoTracking().Where(x => x.Status != AlertStatus.Resolved)
             .OrderByDescending(x => x.LastObservedAt).Take(take).Select(x => new AlertInstanceDetails(x.Id, x.RuleId,
                 x.DeduplicationKey, x.Severity.ToString(), x.Status.ToString(), x.CurrentValue, x.OccurrenceCount,
-                x.OpenedAt, x.LastObservedAt, x.ResolvedAt)).ToListAsync(cancellationToken);
+                x.OpenedAt, x.LastObservedAt, x.ResolvedAt, x.Acknowledgement == null ? null : x.Acknowledgement.Subject, x.Acknowledgement == null ? null : x.Acknowledgement.Note)).ToListAsync(cancellationToken);
 
     public Task<VerificationRun?> GetVerificationRunAsync(
         Guid id,
@@ -94,6 +94,6 @@ internal sealed class EfOperationsRepository :
                 x.ActualRtoMinutes,
                 x.EvidenceReference,
                 x.PlannedAt,
-                x.CompletedAt))
+                x.CompletedAt, x.RequestedBy, x.StartedAt, x.Notes))
             .ToListAsync(cancellationToken);
 }

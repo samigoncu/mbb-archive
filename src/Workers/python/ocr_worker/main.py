@@ -8,7 +8,7 @@ from mbb_worker_common.ids import deterministic_event_id
 from mbb_worker_common.rabbit import RabbitBus
 from mbb_worker_common.storage import ObjectStorage
 from providers import create_provider
-from renderer import render_pages
+from document_recognition import recognize_document
 from searchable_pdf import create_searchable_pdf
 
 QUEUE = os.getenv("OCR_QUEUE", "mbb.archive.processing.ocr.v1")
@@ -35,7 +35,8 @@ async def run() -> None:
                 ignore_processed=True,
             ):
                 source = json.loads(message.body)
-                event_name, result = process_document(
+                event_name, result = await asyncio.to_thread(
+                    process_document,
                     source,
                     storage,
                     provider,
@@ -55,15 +56,8 @@ def process_document(
     searchable_pdf = None
 
     try:
-        dpi = int(os.getenv("OCR_RENDER_DPI", "200"))
-        pages = [
-            provider.recognize(page_number, image)
-            for page_number, image in render_pages(
-                path,
-                source["mimeType"],
-                dpi,
-            )
-        ]
+        dpi = int(os.getenv("OCR_RENDER_DPI", "300"))
+        pages = recognize_document(path, source["mimeType"], dpi, provider)
 
         if not pages:
             raise RuntimeError("OCR input produced no pages.")
@@ -75,6 +69,8 @@ def process_document(
 
         ocr_json = {
             "schemaVersion": "mbb.ocr.v1",
+            "recognitionPolicy": "page-content-v2",
+            "renderDpi": dpi,
             "engine": provider.name,
             "engineVersion": provider.version,
             "languages": provider.languages,

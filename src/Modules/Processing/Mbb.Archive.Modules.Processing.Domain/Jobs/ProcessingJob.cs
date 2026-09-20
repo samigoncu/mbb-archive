@@ -96,14 +96,43 @@ public sealed class ProcessingJob : AggregateRoot<ProcessingJobId>
         Stage = MimeType switch
         {
             "application/pdf" => ProcessingStage.PdfInspectionRequested,
+
             "image/tiff" => ProcessingStage.OcrRequested,
             "image/jpeg" => ProcessingStage.OcrRequested,
             "image/png" => ProcessingStage.OcrRequested,
+
+            // Metin taşıyan formatlar OCR'a değil metin çıkarıcıya gider;
+            // içerikleri zaten makine tarafından okunabilir durumdadır.
+            _ when TextBearingMimeTypes.Contains(MimeType) =>
+                ProcessingStage.TextExtractionRequested,
+
             _ => ProcessingStage.Unsupported
         };
 
         StartedAt = now;
         ConcurrencyVersion++;
+    }
+
+    public void ReprocessCompletedPdf(DateTimeOffset now)
+    {
+        if (MimeType != "application/pdf")
+            throw new DomainRuleViolationException("Bu işlem yalnız PDF içindir.");
+        Reprocess(now);
+    }
+
+    public void Reprocess(DateTimeOffset now)
+    {
+        if (Stage is not (ProcessingStage.Completed or ProcessingStage.Failed))
+            throw new DomainRuleViolationException("Yalnız tamamlanmış veya başarısız işlemler yeniden başlatılabilir.");
+        if (MimeType is not ("application/pdf" or "image/tiff" or "image/jpeg" or "image/png") && !TextBearingMimeTypes.Contains(MimeType))
+            throw new DomainRuleViolationException("Bu dosya biçimi yeniden işlenemiyor.");
+
+        // Keep previous artifacts as evidence until a new result is indexed.
+        Stage = ProcessingStage.Queued;
+        CompletedAt = null;
+        FailureCode = null;
+        FailureDetail = null;
+        QueueInitialStage(now);
     }
 
     public bool ApplyPdfInspection(
@@ -138,6 +167,80 @@ public sealed class ProcessingJob : AggregateRoot<ProcessingJobId>
         ConcurrencyVersion++;
         return requiresOcr;
     }
+
+    /// <summary>
+    /// §3.1 kapsamındaki metin taşıyan formatlar. Tür içerik imzasından
+    /// belirlenir; uzantı bu karara girmez.
+    /// </summary>
+    private static readonly HashSet<string> TextBearingMimeTypes =
+    [
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.oasis.opendocument.text",
+        "application/vnd.oasis.opendocument.spreadsheet",
+        "application/vnd.oasis.opendocument.presentation",
+        "application/msword",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.ms-outlook",
+        "message/rfc822",
+        "text/plain",
+        "text/csv"
+    ];
+
+    public void ApplyTextExtraction(
+        string engine,
+        int pageCount,
+        IEnumerable<ProcessingArtifact> artifacts)
+    {
+        if (Stage != ProcessingStage.TextExtractionRequested)
+        {
+            throw new DomainRuleViolationException(
+                "Text extraction result is not expected for the current stage.");
+        }
+
+        if (pageCount <= 0)
+        {
+            throw new DomainRuleViolationException(
+                "Text extraction page count must be positive.");
+        }
+
+        // Metin çıkarma OCR değildir; güven skoru üretmez ve OCR alanlarını
+        // doldurmaz. Aranabilir metin aynı artifact sözleşmesinde saklanır.
+        OcrEngine = engine;
+        OcrPageCount = pageCount;
+
+        _artifacts.AddRange(artifacts);
+
+        Stage = ProcessingStage.AwaitingIndex;
+        ConcurrencyVersion++;
+    }
+
+    public void ApplyOfficeRendering(string engine, string languages, int pageCount,
+        double confidence, IEnumerable<ProcessingArtifact> artifacts)
+    {
+        if (!OfficeDocumentTypes.Contains(MimeType))
+            throw new DomainRuleViolationException("Office PDF result is not valid for this document type.");
+        var results = artifacts.ToArray();
+        if (!results.Any(x => x.Type == ProcessingArtifactType.PdfNormalized && x.MimeType == "application/pdf")
+            || !results.Any(x => x.Type == ProcessingArtifactType.OcrJson))
+            throw new DomainRuleViolationException("Office PDF and OCR JSON artifacts are required.");
+        ApplyTextExtraction(engine, pageCount, results);
+        OcrAverageConfidence = Math.Clamp(confidence, 0d, 1d);
+        OcrLanguages = languages;
+    }
+
+    public static readonly IReadOnlySet<string> OfficeDocumentTypes = new HashSet<string>
+    {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.oasis.opendocument.text",
+        "application/vnd.oasis.opendocument.spreadsheet",
+        "application/vnd.oasis.opendocument.presentation",
+        "application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint"
+    };
 
     public void ApplyOcrResult(
         string engine,

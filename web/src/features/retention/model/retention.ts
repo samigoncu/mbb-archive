@@ -22,7 +22,7 @@ export type RetentionRuleListItem = {
 
 export const actionLabels: Record<string, string> = {
   Review: "Gözden Geçir",
-  Destroy: "İmha",
+  Destroy: "Fiziksel imha",
   Transfer: "Devir",
   KeepPermanent: "Sürekli Sakla",
 };

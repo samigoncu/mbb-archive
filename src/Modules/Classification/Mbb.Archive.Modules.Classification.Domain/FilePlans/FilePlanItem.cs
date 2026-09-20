@@ -48,4 +48,21 @@ public sealed class FilePlanItem : Entity<FilePlanItemId>
         Title = title.Trim();
         Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
     }
+
+    /// <summary>
+    /// Başlık, açıklama ve "bu koda dosya açılabilir" işareti düzeltilir.
+    /// </summary>
+    /// <remarks>
+    /// Kod değiştirilemez: belgeler, dijital dosyalar, fiziksel klasörler ve
+    /// birim–SDP atamaları koda göre bağlanır; kodu düzenletmek bu bağları
+    /// sessizce koparırdı. Yanlış kod pasife alınıp doğrusu açılır.
+    /// </remarks>
+    public void Update(string title, string? description, bool isSelectable)
+    {
+        Rename(title, description);
+        IsSelectable = isSelectable;
+    }
+
+    /// <summary>Pasif konuya yeni belge ya da dosya bağlanamaz; mevcutlar korunur.</summary>
+    public void SetActive(bool isActive) => IsActive = isActive;
 }

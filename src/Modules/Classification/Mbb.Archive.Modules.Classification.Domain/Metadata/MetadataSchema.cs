@@ -53,8 +53,6 @@ public sealed class MetadataSchema : AggregateRoot<MetadataSchemaId>
         bool isRepeatable,
         string? optionsJson)
     {
-        EnsureDraft();
-
         if (_fields.Any(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase)))
             throw new DomainRuleViolationException($"Metadata field key '{key}' already exists.");
 
@@ -82,9 +80,44 @@ public sealed class MetadataSchema : AggregateRoot<MetadataSchemaId>
         PublishedAt = now;
     }
 
+    public void RevertToDraft()
+    {
+        if (Status != MetadataSchemaStatus.Published)
+            throw new DomainRuleViolationException("Yalnızca yayımlanmış şema taslağa geri alınabilir.");
+        Status = MetadataSchemaStatus.Draft;
+        PublishedAt = null;
+    }
+
     private void EnsureDraft()
     {
         if (Status != MetadataSchemaStatus.Draft)
             throw new DomainRuleViolationException("Published metadata schema is immutable. Create a new version instead.");
+    }
+
+    public void Rename(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainRuleViolationException("Metadata schema name is required.");
+        Name = name.Trim();
+    }
+
+    public void UpdateField(Guid fieldId, string label, MetadataFieldType fieldType,
+        bool isRequired, bool isSearchable, bool isRepeatable, string? optionsJson)
+    {
+        var field = _fields.SingleOrDefault(x => x.Id == fieldId)
+            ?? throw new DomainRuleViolationException("Üstveri alanı bulunamadı.");
+
+        if (Status == MetadataSchemaStatus.Published && field.FieldType != fieldType)
+            throw new DomainRuleViolationException("Yayımlanmış şemada veri türü değiştirilemez. Değişiklik için yeni bir sürüm açınız.");
+
+        field.Update(label, fieldType, isRequired, isSearchable, isRepeatable, optionsJson);
+    }
+
+    public void RemoveField(Guid fieldId)
+    {
+        EnsureDraft();
+        var field = _fields.SingleOrDefault(x => x.Id == fieldId)
+            ?? throw new DomainRuleViolationException("Üstveri alanı bulunamadı.");
+        _fields.Remove(field);
     }
 }

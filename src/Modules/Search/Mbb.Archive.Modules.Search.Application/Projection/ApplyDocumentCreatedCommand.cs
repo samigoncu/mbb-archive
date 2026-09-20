@@ -7,4 +7,5 @@ public sealed record ApplyDocumentCreatedCommand(
     string EventName,
     Guid DocumentId,
     string Title,
-    DateTimeOffset OccurredAt) : ICommand;
+    DateTimeOffset OccurredAt,
+    string? OwnerUnitPath = null) : ICommand;

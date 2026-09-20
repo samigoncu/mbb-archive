@@ -42,5 +42,19 @@
     <ProjectReference Include="../../Modules/OfficialCorrespondence/Mbb.Archive.Modules.OfficialCorrespondence.Presentation/Mbb.Archive.Modules.OfficialCorrespondence.Presentation.csproj" />
     <ProjectReference Include="../../Modules/Operations/Mbb.Archive.Modules.Operations.Infrastructure/Mbb.Archive.Modules.Operations.Infrastructure.csproj" />
     <ProjectReference Include="../../Modules/Operations/Mbb.Archive.Modules.Operations.Presentation/Mbb.Archive.Modules.Operations.Presentation.csproj" />
+    <ProjectReference Include="../../Modules/Collections/Mbb.Archive.Modules.Collections.Infrastructure/Mbb.Archive.Modules.Collections.Infrastructure.csproj" />
+    <ProjectReference Include="../../Modules/Collections/Mbb.Archive.Modules.Collections.Presentation/Mbb.Archive.Modules.Collections.Presentation.csproj" />
+    <ProjectReference Include="../../Modules/Geo/Mbb.Archive.Modules.Geo.Infrastructure/Mbb.Archive.Modules.Geo.Infrastructure.csproj" />
+    <ProjectReference Include="../../Modules/Geo/Mbb.Archive.Modules.Geo.Presentation/Mbb.Archive.Modules.Geo.Presentation.csproj" />
+    <ProjectReference Include="../../Modules/Organization/Mbb.Archive.Modules.Organization.Infrastructure/Mbb.Archive.Modules.Organization.Infrastructure.csproj" />
+    <ProjectReference Include="../../Modules/Organization/Mbb.Archive.Modules.Organization.Presentation/Mbb.Archive.Modules.Organization.Presentation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Modules/Organization/Mbb.Archive.Modules.Organization.Infrastructure/Mbb.Archive.Modules.Organization.Infrastructure.csproj" />
+    <ProjectReference Include="../../Modules/Organization/Mbb.Archive.Modules.Organization.Presentation/Mbb.Archive.Modules.Organization.Presentation.csproj" />
+  </ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="Mbb.Archive.ArchiveFiling.IntegrationTests" /></ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/LocalStoragePaths.cs" Link="Hosting/LocalStoragePaths.cs" />
   </ItemGroup>
 </Project>

@@ -9,6 +9,11 @@ trim_trailing_whitespace = true
 [*.cs]
 indent_style = space
 indent_size = 4
+
+# Bazı dosyalar 200+ karakterlik tek satırlara sıkıştırılmıştı; aynı depoda
+# iki farklı yazım alışkanlığı okumayı ve gözden geçirmeyi zorlaştırıyor.
+# Bu sınır editörler ve `dotnet format` tarafından kullanılır.
+max_line_length = 140
 csharp_style_namespace_declarations = file_scoped:suggestion
 csharp_style_prefer_primary_constructors = false:suggestion
 csharp_style_prefer_collection_expression = true:suggestion
@@ -17,3 +22,6 @@ dotnet_style_qualification_for_field = false:suggestion
 [*.{json,js,jsx,ts,tsx,yml,yaml,css,md}]
 indent_style = space
 indent_size = 2
+
+[*.{ts,tsx}]
+max_line_length = 140

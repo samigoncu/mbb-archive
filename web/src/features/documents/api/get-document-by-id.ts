@@ -7,6 +7,11 @@ export type DocumentDetails = {
   createdAt: string;
   archivedAt: string | null;
   versionCount: number;
+  concurrencyVersion?: number;
+  cancelledAt?: string | null;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
+  currentVersionNumber?: number | null;
 };
 
 export async function getDocumentById(

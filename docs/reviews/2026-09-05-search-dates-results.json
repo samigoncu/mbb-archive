@@ -1,0 +1,10 @@
+{
+  "indexed_with_creation_dates": 12,
+  "indexed_with_upload_dates": 8,
+  "date_boundaries": "passed",
+  "basic_and_advanced_http": "passed",
+  "api_health": "Healthy",
+  "search_backend_tests": 18,
+  "search_frontend_tests": 10,
+  "full_frontend_suite": "31 passed; 1 unrelated topbar-collapse test failed"
+}

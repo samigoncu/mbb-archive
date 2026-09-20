@@ -10,4 +10,6 @@ public sealed record DocumentDetails(
     string Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ArchivedAt,
-    int VersionCount);
+    int VersionCount,
+    long ConcurrencyVersion = 0,
+    int? CurrentVersionNumber = null, DateTimeOffset? CancelledAt = null, string? CancelledBy = null, string? CancellationReason = null);

@@ -1,0 +1,72 @@
+[
+  {
+    "path": "/access/roles",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/organization/units",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/classification/file-plans",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/classification/metadata-schemas",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/collections",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/physical-archive/locations/root",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/physical-archive/folders",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/documents/dossiers",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/retention/rules",
+    "status": 409,
+    "rejected": true
+  },
+  {
+    "path": "/retention/dispositions",
+    "status": 404,
+    "rejected": true
+  },
+  {
+    "path": "/workflows/assigned-tasks",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/evidence/cms/validate",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/evidence/timestamp/validate",
+    "status": 400,
+    "rejected": true
+  },
+  {
+    "path": "/evidence/pdf/validate",
+    "status": 400,
+    "rejected": true
+  }
+]

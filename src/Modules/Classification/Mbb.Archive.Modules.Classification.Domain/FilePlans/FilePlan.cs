@@ -58,6 +58,32 @@ public sealed class FilePlan : AggregateRoot<FilePlanId>
             effectiveFrom,
             effectiveTo);
 
+    // Historical items and document references remain intact.
+    public void Retire() => IsActive = false;
+
+    public void Reinstate() => IsActive = true;
+
+    public void Rename(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainRuleViolationException("File plan name is required.");
+        Name = name.Trim();
+    }
+
+    /// <summary>Silinebilmesi için altında düğüm bulunmamalı.</summary>
+    public void RemoveItem(FilePlanItemId itemId)
+    {
+        var item = _items.SingleOrDefault(x => x.Id == itemId)
+            ?? throw new DomainRuleViolationException("Konu kodu bulunamadı.");
+        if (_items.Any(x => x.ParentId == itemId))
+            throw new DomainRuleViolationException("Bu kodun altında başka konular var. Önce onları kaldırın.");
+        _items.Remove(item);
+    }
+
+    public FilePlanItem Item(FilePlanItemId itemId)
+        => _items.SingleOrDefault(x => x.Id == itemId)
+           ?? throw new DomainRuleViolationException("Konu kodu bulunamadı.");
+
     public FilePlanItem AddItem(
         FilePlanItemId? parentId,
         string code,
@@ -65,6 +91,9 @@ public sealed class FilePlan : AggregateRoot<FilePlanId>
         int level,
         bool isSelectable)
     {
+        if (!IsActive)
+            throw new DomainRuleViolationException("Kullanımdan kaldırılmış dosya planına başlık eklenemez.");
+
         if (_items.Any(x => string.Equals(x.Code, code, StringComparison.OrdinalIgnoreCase)))
             throw new DomainRuleViolationException($"File plan item code '{code}' already exists in this plan.");
 

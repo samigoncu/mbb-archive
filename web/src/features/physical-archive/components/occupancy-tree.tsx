@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LocationOccupancyItem } from "@/features/physical-archive/api/get-occupancy";
-import { locationTypeLabels } from "@/features/physical-archive/model/location";
+import { locationTypeLabel, type LocationTypeItem } from "@/features/physical-archive/model/location";
+import { EditLocationDialog, NewLocationDialog, RemoveLocationDialog } from "./location-dialogs";
 
 type Node = LocationOccupancyItem & {
   children: Node[];
@@ -12,7 +13,7 @@ type Node = LocationOccupancyItem & {
   totalCapacity: number;
 };
 
-export function OccupancyTree({ locations }: { locations: LocationOccupancyItem[] }) {
+export function OccupancyTree({ locations, types = [], canManage = false }: { locations: LocationOccupancyItem[]; types?: LocationTypeItem[]; canManage?: boolean }) {
   const roots = useMemo(() => buildTree(locations), [locations]);
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(roots.map((node) => node.id)),
@@ -27,18 +28,22 @@ export function OccupancyTree({ locations }: { locations: LocationOccupancyItem[
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-flat">
-      <div className="flex items-center gap-3 border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-flat">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><h2 className="text-sm font-semibold">Konum hiyerarşisi</h2><div className="flex gap-3 text-xs"><button type="button" onClick={() => setExpanded(new Set(locations.map(location => location.id)))} className="rounded-md border px-3 py-2 hover:bg-muted">Tümünü genişlet</button><button type="button" onClick={() => setExpanded(new Set())} className="rounded-md border px-3 py-2 hover:bg-muted">Tümünü daralt</button></div></div>
+      <div className="flex min-w-[680px] items-center gap-3 border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         <span className="flex-1">Yerleşim Birimi</span>
         <span className="w-40">Doluluk</span>
         <span className="w-24 text-right">Dosya</span>
+        {canManage && <span className="w-28 text-right">İşlemler</span>}
       </div>
-      <ul className="divide-y divide-border">
+      <ul className="min-w-[680px] divide-y divide-border">
         {roots.map((node) => (
           <Row
             key={node.id}
             node={node}
             depth={0}
+            canManage={canManage}
+            types={types}
             expanded={expanded}
             onToggle={(id) =>
               setExpanded((current) => {
@@ -59,11 +64,15 @@ function Row({
   depth,
   expanded,
   onToggle,
+  canManage,
+  types,
 }: {
   node: Node;
   depth: number;
   expanded: Set<string>;
   onToggle: (id: string) => void;
+  canManage: boolean;
+  types: LocationTypeItem[];
 }) {
   const hasChildren = node.children.length > 0;
   const isExpanded = expanded.has(node.id);
@@ -72,7 +81,7 @@ function Row({
 
   return (
     <>
-      <li className="flex items-center gap-3 px-3 py-2">
+      <li className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30">
         <div
           className="flex min-w-0 flex-1 items-center gap-1.5"
           style={{ paddingLeft: `${depth * 1.1}rem` }}
@@ -81,6 +90,7 @@ function Row({
             <button
               type="button"
               onClick={() => onToggle(node.id)}
+              aria-expanded={isExpanded}
               aria-label={isExpanded ? `${node.code} daralt` : `${node.code} genişlet`}
               className="inline-flex size-6 shrink-0 items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -94,15 +104,16 @@ function Row({
             <span className="size-6 shrink-0" aria-hidden />
           )}
           <span className="font-mono text-xs font-semibold">{node.code}</span>
-          <span className="truncate text-sm">{node.name}</span>
+          <span className="min-w-0 break-words text-sm leading-5">{node.name}</span>
           <span className="shrink-0 text-2xs uppercase tracking-wider text-muted-foreground">
-            {locationTypeLabels[node.type]}
+            {node.typeName || locationTypeLabel(node.type, types)}
           </span>
+          {!node.isActive && <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-2xs text-muted-foreground">Pasif</span>}
         </div>
 
         <div className="w-40">
           {ratio === null ? (
-            <span className="text-xs text-muted-foreground">kapasite yok</span>
+            <span className="text-xs text-muted-foreground">Kapasite tanımsız</span>
           ) : (
             <div className="flex items-center gap-2">
               <div
@@ -135,6 +146,12 @@ function Row({
             <span className="text-muted-foreground"> / {node.totalCapacity}</span>
           ) : null}
         </span>
+
+        {canManage && <span className="flex w-28 shrink-0 items-center justify-end gap-0.5">
+          <NewLocationDialog parent={node} types={types} />
+          <EditLocationDialog location={node} types={types} />
+          <RemoveLocationDialog location={node} childCount={node.children.length} />
+        </span>}
       </li>
 
       {hasChildren && isExpanded
@@ -145,6 +162,8 @@ function Row({
               depth={depth + 1}
               expanded={expanded}
               onToggle={onToggle}
+              canManage={canManage}
+              types={types}
             />
           ))
         : null}

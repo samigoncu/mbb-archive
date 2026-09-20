@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentUser } from "@/features/access/api/get-current-user";
+import { getBranding } from "@/features/branding/api/branding";
+import { brandingAssetUrl } from "@/features/branding/model/branding";
 
 const heading = Lexend({
   subsets: ["latin", "latin-ext"],
@@ -24,13 +26,25 @@ const mono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
-export const metadata = {
-  title: "MBB Kurumsal Arşiv",
-  description: "Kurumsal Belge, Arşiv ve Dijital Hafıza Platformu",
-};
+/**
+ * Başlık, açıklama ve favicon kurum kimliği ayarından gelir.
+ *
+ * `template` alt sayfalara uygulanır: her sayfa yalnız kendi adını verir,
+ * kurum başlığı buradan eklenir. Böylece başlık tek yerden değiştirilebilir.
+ */
+export async function generateMetadata() {
+  const branding = await getBranding();
+  const favicon = brandingAssetUrl(branding.favicon);
+
+  return {
+    title: { default: branding.siteTitle, template: `%s · ${branding.siteTitle}` },
+    description: branding.description,
+    ...(favicon ? { icons: { icon: favicon } } : {}),
+  };
+}
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const user = await getCurrentUser();
+  const [user, branding] = await Promise.all([getCurrentUser(), getBranding()]);
 
   return (
     <html
@@ -43,7 +57,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       )}
     >
       <body>
-        <AppShell user={user}>{children}</AppShell>
+        <AppShell user={user} branding={branding}>{children}</AppShell>
         <Toaster />
       </body>
     </html>

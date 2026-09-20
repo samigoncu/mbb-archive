@@ -1,0 +1,5 @@
+aio-pika==10.0.1
+boto3==1.43.86
+pypdf==6.16.2
+pypdfium2==5.13.0
+Pillow==12.3.0

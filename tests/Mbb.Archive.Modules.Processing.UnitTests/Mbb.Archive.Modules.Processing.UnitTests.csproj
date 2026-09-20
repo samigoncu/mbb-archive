@@ -11,5 +11,6 @@
 
     <ProjectReference Include="../../src/BuildingBlocks/Mbb.Archive.BuildingBlocks.Domain/Mbb.Archive.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Processing/Mbb.Archive.Modules.Processing.Domain/Mbb.Archive.Modules.Processing.Domain.csproj" />
+    <ProjectReference Include="../../src/Modules/Processing/Mbb.Archive.Modules.Processing.Application/Mbb.Archive.Modules.Processing.Application.csproj" />
   </ItemGroup>
 </Project>

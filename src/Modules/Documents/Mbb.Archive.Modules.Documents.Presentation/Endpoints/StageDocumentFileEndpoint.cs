@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.RateLimiting;
 using Mbb.Archive.BuildingBlocks.Presentation;
@@ -10,6 +11,7 @@ namespace Mbb.Archive.Modules.Documents.Presentation.Endpoints;
 internal static class StageDocumentFileEndpoint
 {
     private const string FileNameHeader = "X-File-Name";
+    private const string ReasonHeader = "X-Version-Reason";
 
     internal static RouteGroupBuilder MapStageDocumentFile(this RouteGroupBuilder group)
     {
@@ -18,9 +20,24 @@ internal static class StageDocumentFileEndpoint
                 async (
                     Guid id,
                     HttpRequest request,
+                    HttpContext context,
                     StageDocumentFileCommandHandler handler,
+                    Mbb.Archive.Modules.Documents.Application.Settings.UploadPolicyHandler policyHandler,
                     CancellationToken cancellationToken) =>
                 {
+                    var policy = await policyHandler.GetAsync(cancellationToken);
+                    if (request.ContentLength > policy.MaxUploadBytes)
+                    {
+                        return Results.Problem(
+                            statusCode: StatusCodes.Status413PayloadTooLarge,
+                            detail: $"Dosya boyutu {policy.MaxFileSizeMb} MB sınırını aşıyor.");
+                    }
+
+                    // Raise Kestrel's default only for the raw file upload, before reading it.
+                    var bodySize = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
+                    if (bodySize is { IsReadOnly: false })
+                        bodySize.MaxRequestBodySize = policy.MaxUploadBytes;
+
                     var encodedFileName = request.Headers[FileNameHeader].ToString();
                     var fileName = Uri.UnescapeDataString(encodedFileName);
 
@@ -39,13 +56,25 @@ internal static class StageDocumentFileEndpoint
                     var contentType =
                         request.ContentType ?? "application/octet-stream";
 
+                    // §5: sürüm gerekçesi başlıkla taşınır; ilk yüklemede boş
+                    // bırakılabilir, düzeltme sürümlerinde anlamlıdır.
+                    var reason = Uri.UnescapeDataString(
+                        request.Headers[ReasonHeader].ToString());
+
+                    var submittedBy =
+                        context.User.FindFirst("sub")?.Value
+                        ?? context.User.Identity?.Name
+                        ?? string.Empty;
+
                     var result = await handler.Handle(
                         new StageDocumentFileCommand(
                             id,
                             fileName,
                             contentType,
                             request.ContentLength.Value,
-                            request.Body),
+                            request.Body,
+                            submittedBy,
+                            reason),
                         cancellationToken);
 
                     return result.IsFailure
@@ -55,6 +84,7 @@ internal static class StageDocumentFileEndpoint
                             result.Value);
                 })
             .RequireRateLimiting("uploads")
+            .RequireAuthorization("permission:documents.write")
             .WithName("StageDocumentFile")
             .WithSummary("Streams an original file into quarantine/staging.")
             .WithDescription(

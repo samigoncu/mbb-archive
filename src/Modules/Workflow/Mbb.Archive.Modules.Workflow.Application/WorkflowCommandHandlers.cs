@@ -1,3 +1,4 @@
+using Mbb.Archive.BuildingBlocks.Application.Security;
 using Mbb.Archive.BuildingBlocks.Application;
 using Mbb.Archive.BuildingBlocks.Domain;
 using Mbb.Archive.Modules.Workflow.Domain.Definitions;
@@ -37,19 +38,22 @@ public sealed class WorkflowCommandHandlers :
     private readonly WorkflowRuntime _runtime;
     private readonly IOutbox<WorkflowBoundary> _outbox;
     private readonly TimeProvider _time;
+    private readonly ICurrentUserPermissions _permissions;
+    private readonly IDocumentVisibility _visibility;
 
     public WorkflowCommandHandlers(
         IWorkflowRepository repository,
         IUnitOfWork<WorkflowBoundary> unitOfWork,
         WorkflowRuntime runtime,
         IOutbox<WorkflowBoundary> outbox,
-        TimeProvider time)
+        TimeProvider time, ICurrentUserPermissions permissions, IDocumentVisibility visibility)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
         _runtime = runtime;
         _outbox = outbox;
         _time = time;
+        _permissions = permissions; _visibility = visibility;
     }
 
     public async Task<Result<Guid>> Handle(
@@ -195,12 +199,17 @@ public sealed class WorkflowCommandHandlers :
         if (state is null)
             return Result.Failure(NotFound("instance"));
 
+        var task = state.Value.Instance.WorkItems.FirstOrDefault(item => item.NodeId == state.Value.Instance.CurrentNodeId && item.Status != WorkflowWorkItemStatus.Completed);
+        var visible = await _visibility.FilterAsync([state.Value.Instance.DocumentId], ct);
+        var allowed = await _permissions.HasAllPermissionsAsync(ct) || (await _permissions.GetAsync(ct)).Contains(task?.Permission ?? "");
+        if (!visible.Contains(state.Value.Instance.DocumentId) || task is null || !allowed || (task.AssigneeSubjectId is not null && task.AssigneeSubjectId != _permissions.Subject))
+            return Result.Failure(Error.NotFound("workflow.task_unavailable", "Görev size atanmış değil veya erişim yetkiniz yok."));
         try
         {
             var now = _time.GetUtcNow();
 
             state.Value.Instance.CompleteCurrentTask(
-                command.CompletedBy,
+                _permissions.Subject,
                 command.Outcome,
                 command.Variables,
                 now);

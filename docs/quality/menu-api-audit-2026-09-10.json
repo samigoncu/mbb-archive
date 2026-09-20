@@ -1,0 +1,102 @@
+[
+  {
+    "path": "/documents?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/physical-archive/folders?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/physical-archive/locations",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/physical-archive/loans?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/processing/jobs?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/collections?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/access/administration/roles",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/organization/units",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/classification/file-plans",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/classification/metadata-schemas",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/retention/cases?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/retention/rules",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/retention/dispositions?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/archive/records?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/evidence/capabilities",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/evidence/validations?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/operations/overview",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/workflows/work-items/mine",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "/audit/events?page=1&pageSize=1",
+    "admin": 200,
+    "unprivileged": 403
+  },
+  {
+    "path": "collection nonexistent document",
+    "status": 404,
+    "expected": 404
+  }
+]

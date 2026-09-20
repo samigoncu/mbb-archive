@@ -18,6 +18,8 @@ internal sealed class SearchDocumentConfiguration : IEntityTypeConfiguration<Sea
         builder.Property(x => x.OcrJsonArtifactStorageKey).HasColumnName("ocr_json_artifact_storage_key").HasMaxLength(1000);
         builder.Property(x => x.ClassificationJson).HasColumnName("classification_json").HasColumnType("jsonb");
         builder.Property(x => x.MetadataJson).HasColumnName("metadata_json").HasColumnType("jsonb");
+        builder.Property(x => x.GeoJson).HasColumnName("geo_json").HasColumnType("jsonb");
+        builder.Property(x => x.OwnerUnitPath).HasColumnName("owner_unit_path").HasMaxLength(1000);
         builder.Property(x => x.Revision).HasColumnName("revision").IsConcurrencyToken();
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Ignore(x => x.DomainEvents);

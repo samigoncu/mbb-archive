@@ -1,4 +1,4 @@
-import { ApiError, getPublicApiBaseUrl } from "@/lib/api/api-client";
+import { ApiError } from "@/lib/api/api-error";
 
 export type StageDocumentFileResponse = {
   ingestionId: string;
@@ -8,17 +8,26 @@ export type StageDocumentFileResponse = {
   sizeBytes: number;
 };
 
+/**
+ * Var olan bir belgeye dosya yükler. Belgede zaten sürüm varsa bu yeni bir
+ * sürüm oluşturur; §5 gereği gerekçe kaydı için `reason` iletilir.
+ */
 export async function stageDocumentFile(
   documentId: string,
   file: File,
+  reason?: string,
 ): Promise<StageDocumentFileResponse> {
   const response = await fetch(
-    `${getPublicApiBaseUrl()}/documents/${encodeURIComponent(documentId)}/files`,
+    // Uygulama içi uç; jeton sunucu tarafında eklenir, tarayıcıya inmez.
+    `/api/documents/${encodeURIComponent(documentId)}/files`,
     {
       method: "POST",
       headers: {
         "Content-Type": file.type || "application/octet-stream",
         "X-File-Name": encodeURIComponent(file.name),
+        ...(reason?.trim()
+          ? { "X-Version-Reason": encodeURIComponent(reason.trim()) }
+          : {}),
       },
       body: file,
     },

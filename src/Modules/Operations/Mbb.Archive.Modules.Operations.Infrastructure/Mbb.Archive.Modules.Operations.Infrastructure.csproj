@@ -12,4 +12,5 @@
     <ProjectReference Include="../Mbb.Archive.Modules.Operations.Application/Mbb.Archive.Modules.Operations.Application.csproj" />
     <ProjectReference Include="../Mbb.Archive.Modules.Operations.Domain/Mbb.Archive.Modules.Operations.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="Mbb.Archive.Modules.Operations.UnitTests" /></ItemGroup>
 </Project>

@@ -20,11 +20,57 @@ public static class PhysicalArchiveEndpoints
             .WithTags("Physical Archive")
             .RequireAuthorization();
 
+        group.MapGet("/borrowers", async (string? q, int? page,
+            ILoanBorrowerDirectory directory, CancellationToken ct) =>
+        {
+            if (q?.Length > 100 || page is <= 0) return Results.BadRequest(new { message = "Geçersiz arama veya sayfa." });
+            return Results.Ok(await directory.SearchAsync(q?.Trim() ?? "", new PageRequest(page ?? 1, 25), ct));
+        }).RequireAuthorization("permission:physical-archive.loan");
+
+        // Yerleşim seviyesi kataloğu: bina, oda, dolap, raf… kurum ekleyebilir.
+        group.MapGet("/locations/types", async (PhysicalArchiveQueryHandlers handler, CancellationToken ct)
+            => FromResult(await handler.Handle(new GetLocationTypesQuery(), ct)))
+            .RequireAuthorization("permission:physical-archive.read");
+
+        group.MapPost("/locations/types", async (LocationTypeRequest request, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => Created(await handler.Handle(new CreateLocationTypeCommand(
+                request.Code, request.Name, request.Level, request.CanStoreFolder, request.AllowsCapacity), ct),
+                "/api/v1/physical-archive/locations/types"))
+            .RequireAuthorization("permission:physical-archive.manage");
+
+        group.MapPut("/locations/types/{code}", async (string code, LocationTypeRequest request, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => NoContent(await handler.Handle(new UpdateLocationTypeCommand(
+                code, request.Name, request.Level, request.CanStoreFolder, request.AllowsCapacity), ct)))
+            .RequireAuthorization("permission:physical-archive.manage");
+
+        group.MapPost("/locations/types/{code}/active", async (string code, SetActiveRequest request, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => NoContent(await handler.Handle(new SetLocationTypeActiveCommand(code, request.IsActive), ct)))
+            .RequireAuthorization("permission:physical-archive.manage");
+
+        group.MapDelete("/locations/types/{code}", async (string code, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => NoContent(await handler.Handle(new DeleteLocationTypeCommand(code), ct)))
+            .RequireAuthorization("permission:physical-archive.manage");
+
         group.MapPost("/locations/root", CreateRoot)
             .RequireAuthorization("permission:physical-archive.manage");
 
         group.MapPost("/locations/{parentId:guid}/children", CreateChild)
             .RequireAuthorization("permission:physical-archive.manage");
+
+        group.MapPut("/locations/{id:guid}", async (Guid id, UpdateLocationRequest request, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => NoContent(await handler.Handle(new UpdateLocationCommand(id, request.Code, request.Name, request.Barcode, request.Capacity), ct)))
+            .RequireAuthorization("permission:physical-archive.manage")
+            .WithAccessAudit("access.location-updated.v1", "location", "id");
+
+        group.MapPost("/locations/{id:guid}/active", async (Guid id, SetActiveRequest request, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => NoContent(await handler.Handle(new SetLocationActiveCommand(id, request.IsActive), ct)))
+            .RequireAuthorization("permission:physical-archive.manage")
+            .WithAccessAudit("access.location-activation-changed.v1", "location", "id");
+
+        group.MapDelete("/locations/{id:guid}", async (Guid id, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => NoContent(await handler.Handle(new DeleteLocationCommand(id), ct)))
+            .RequireAuthorization("permission:physical-archive.manage")
+            .WithAccessAudit("access.location-deleted.v1", "location", "id");
 
         group.MapGet("/locations", ListLocations)
             .RequireAuthorization("permission:physical-archive.read");
@@ -36,22 +82,31 @@ public static class PhysicalArchiveEndpoints
             .RequireAuthorization("permission:physical-archive.read");
 
         group.MapPost("/folders", RegisterFolder)
-            .RequireAuthorization("permission:physical-archive.manage");
+            .RequireAuthorization("permission:physical-archive.manage")
+            .WithAccessAudit("access.folder-created.v1", "folder");
 
+        group.MapPost("/folders/{id:guid}/owner", async (Guid id, OwnerRequest request, PhysicalArchiveCommandHandlers handler, CancellationToken ct)
+            => NoContent(await handler.AssignLegacyOwnerAsync(id, request.OwnerUnitId, ct)))
+            .RequireAuthorization("permission:physical-archive.manage");
         group.MapGet("/folders/{id:guid}", GetFolder)
-            .RequireAuthorization("permission:physical-archive.read");
+            .RequireAuthorization("permission:physical-archive.read")
+            .WithAccessAudit("access.folder-viewed.v1", "folder", "id");
 
         group.MapGet("/folders/by-barcode/{barcode}", FindFolder)
-            .RequireAuthorization("permission:physical-archive.read");
+            .RequireAuthorization("permission:physical-archive.read")
+            .WithAccessAudit("access.folder-viewed.v1", "folder");
 
         group.MapPost("/folders/{id:guid}/documents", LinkDocument)
-            .RequireAuthorization("permission:physical-archive.manage");
+            .RequireAuthorization("permission:physical-archive.manage")
+            .WithAccessAudit("access.folder-document-added.v1", "folder", "id");
 
         group.MapPost("/folders/{id:guid}/move", MoveFolder)
-            .RequireAuthorization("permission:physical-archive.manage");
+            .RequireAuthorization("permission:physical-archive.manage")
+            .WithAccessAudit("access.folder-moved.v1", "folder", "id");
 
         group.MapPost("/folders/{id:guid}/checkout", Checkout)
-            .RequireAuthorization("permission:physical-archive.loan");
+            .RequireAuthorization("permission:physical-archive.loan")
+            .WithAccessAudit("access.folder-checked-out.v1", "folder", "id");
 
         group.MapPost("/loans/{id:guid}/return", Return)
             .RequireAuthorization("permission:physical-archive.loan");
@@ -70,7 +125,7 @@ public static class PhysicalArchiveEndpoints
         PhysicalArchiveCommandHandlers handler,
         CancellationToken ct)
         => Created(await handler.Handle(
-            new CreateRootLocationCommand(request.Code, request.Name, request.Barcode), ct),
+            new CreateRootLocationCommand(request.Code, request.Name, request.Barcode, request.TypeCode), ct),
             "/api/v1/physical-archive/locations");
 
     private static async Task<IResult> CreateChild(
@@ -81,7 +136,7 @@ public static class PhysicalArchiveEndpoints
         => Created(await handler.Handle(
             new CreateChildLocationCommand(
                 parentId,
-                request.Type,
+                request.TypeCode,
                 request.Code,
                 request.Name,
                 request.Barcode,
@@ -114,7 +169,7 @@ public static class PhysicalArchiveEndpoints
         Guid? locationId,
         string? status,
         int? year,
-        Guid? containsDocumentId,
+        Guid? containsDocumentId, Guid? ownerUnitId, Guid? digitalDossierId,
         PhysicalArchiveQueryHandlers handler,
         CancellationToken ct)
         => FromResult(
@@ -122,7 +177,7 @@ public static class PhysicalArchiveEndpoints
                 new GetPhysicalFoldersQuery(
                     page ?? 1,
                     pageSize ?? PageRequest.DefaultPageSize,
-                    new FolderFilter(barcode, title, filePlanCode, locationId, status, year, containsDocumentId)),
+                    new FolderFilter(barcode, title, filePlanCode, locationId, status, year, containsDocumentId, ownerUnitId, digitalDossierId)),
                 ct));
 
     private static async Task<IResult> RegisterFolder(
@@ -169,14 +224,16 @@ public static class PhysicalArchiveEndpoints
                 id,
                 request.BorrowerSubjectId,
                 request.Purpose,
-                request.DueAt), ct),
+                request.DueAt,
+                request.CheckedOutBy), ct),
             "/api/v1/physical-archive/loans");
 
     private static async Task<IResult> Return(
         Guid id,
+        ReturnRequest? request,
         PhysicalArchiveCommandHandlers handler,
         CancellationToken ct)
-        => NoContent(await handler.Handle(new ReturnPhysicalFolderCommand(id), ct));
+        => NoContent(await handler.Handle(new ReturnPhysicalFolderCommand(id, request?.ReturnNote), ct));
 
     private static async Task<IResult> ListLoans(
         int? page,
@@ -215,17 +272,24 @@ public static class PhysicalArchiveEndpoints
     private static IResult NoContent(Result result)
         => result.IsFailure ? ApiResults.Problem(result.Error) : Results.NoContent();
 
-    private sealed record RootRequest(string Code, string Name, string Barcode);
+    private sealed record UpdateLocationRequest(string Code, string Name, string Barcode, int? Capacity);
+    private sealed record SetActiveRequest(bool IsActive);
+    private sealed record LocationTypeRequest(string Code, string Name, int Level, bool CanStoreFolder, bool AllowsCapacity);
+
+    private sealed record RootRequest(string Code, string Name, string Barcode, string? TypeCode = null);
     private sealed record ChildRequest(
-        ArchiveLocationType Type,
+        string TypeCode,
         string Code,
         string Name,
         string Barcode,
         int? Capacity);
+    private sealed record OwnerRequest(Guid OwnerUnitId);
     private sealed record LinkRequest(Guid DocumentId);
     private sealed record MoveRequest(Guid DestinationLocationId);
     private sealed record CheckoutRequest(
         string BorrowerSubjectId,
         string Purpose,
-        DateTimeOffset DueAt);
+        DateTimeOffset DueAt,
+        string? CheckedOutBy = null);
+    private sealed record ReturnRequest(string? ReturnNote);
 }

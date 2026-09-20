@@ -2,6 +2,7 @@ using Mbb.Archive.BuildingBlocks.Messaging.RabbitMq;
 using Mbb.Archive.Worker.SecurityScan;
 
 var builder = Host.CreateApplicationBuilder(args);
+Mbb.Archive.Hosting.LocalStoragePaths.Configure(builder.Configuration, builder.Environment);
 
 builder.Services.AddRabbitMqMessaging(builder.Configuration);
 

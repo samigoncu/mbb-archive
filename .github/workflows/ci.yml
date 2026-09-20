@@ -9,6 +9,26 @@ jobs:
   quality:
     runs-on: ubuntu-latest
 
+    # Kalıcılık testleri gerçek PostgreSQL ister; servis olmadan sessizce
+    # "Inconclusive" ile atlanıyor ve EF eşlemeleri ile migration'lar hiç
+    # doğrulanmıyordu.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          # Entegrasyon testleri, adı "mbb_archive_*tests*" kalıbına uymayan
+          # bir veritabanına yazmayı reddeder; bu koruma kasıtlıdır.
+          POSTGRES_DB: mbb_archive_ci_tests
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +49,9 @@ jobs:
       - name: Python worker syntax
         run: python -m compileall -q src/Workers/python
 
+      - name: Python worker dependencies
+        run: python -m pip install -r src/Workers/python/ocr_worker/requirements.txt
+
       - name: Python worker common tests
         env:
           PYTHONPATH: src/Workers/python/common
@@ -41,6 +64,8 @@ jobs:
         run: dotnet build Mbb.Archive.slnx --configuration Release --no-restore
 
       - name: Backend tests
+        env:
+          MBB_ARCHIVE_TEST_POSTGRES: "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=mbb_archive_ci_tests"
         run: dotnet test Mbb.Archive.slnx --configuration Release --no-build
 
       # package-lock.json ilk VS Code restore'unda commit edildikten sonra `npm ci` kullanılmalıdır.
@@ -51,6 +76,10 @@ jobs:
       - name: Frontend typecheck
         working-directory: web
         run: npm run typecheck
+
+      - name: Frontend tests
+        working-directory: web
+        run: npm test
 
       - name: Frontend build
         working-directory: web

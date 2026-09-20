@@ -24,3 +24,10 @@ public sealed record WorkflowTaskEscalatedIntegrationEvent(
 {
     public string EventName => "workflow.task-escalated.v1";
 }
+
+public sealed record WorkflowTaskAssignedIntegrationEvent(Guid EventId, Guid InstanceId, Guid WorkItemId,
+    Guid DocumentId, string? PreviousAssignee, string AssigneeSubjectId, string AssignedBy,
+    DateTimeOffset OccurredAt) : IIntegrationEvent
+{
+    public string EventName => "workflow.task-assigned.v1";
+}

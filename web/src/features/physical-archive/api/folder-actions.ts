@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { ApiError, apiPost } from "@/lib/api/api-client";
 
-export type ActionState = { status: "idle" | "success" | "error"; message?: string };
+export type ActionState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+};
 
 /**
  * Doğrulama backend domain kurallarının alternatifi değildir; burada yalnızca
@@ -19,13 +22,16 @@ export async function createFolderAction(
   const locationId = String(formData.get("locationId") ?? "").trim();
 
   if (!barcode || !title || !filePlanCode || !locationId) {
-    return { status: "error", message: "Barkod, başlık, dosya planı ve konum zorunludur." };
+    return {
+      status: "error",
+      message: "Barkod, başlık, dosya planı ve konum zorunludur.",
+    };
   }
 
   try {
     await apiPost<Record<string, string>, { id: string }>(
       "/physical-archive/folders",
-      { barcode, title, filePlanCode, locationId },
+      { barcode, title, filePlanCode, locationId, ownerUnitId: String(formData.get("ownerUnitId") || ""), ...(formData.get("digitalDossierId") ? { digitalDossierId: String(formData.get("digitalDossierId")) } : {}) },
     );
   } catch (error) {
     return { status: "error", message: toMessage(error) };
@@ -33,7 +39,10 @@ export async function createFolderAction(
 
   revalidatePath("/dosya-islemleri");
 
-  return { status: "success", message: `${barcode} numaralı dosya oluşturuldu.` };
+  return {
+    status: "success",
+    message: `${barcode} numaralı dosya oluşturuldu.`,
+  };
 }
 
 export async function moveFolderAction(
@@ -41,7 +50,9 @@ export async function moveFolderAction(
   formData: FormData,
 ): Promise<ActionState> {
   const folderId = String(formData.get("folderId") ?? "").trim();
-  const destinationLocationId = String(formData.get("destinationLocationId") ?? "").trim();
+  const destinationLocationId = String(
+    formData.get("destinationLocationId") ?? "",
+  ).trim();
 
   if (!folderId || !destinationLocationId) {
     return { status: "error", message: "Hedef konum seçilmelidir." };
@@ -56,7 +67,11 @@ export async function moveFolderAction(
     return { status: "error", message: toMessage(error) };
   }
 
+  // Taşıma hem dosya listesini hem yerleşim doluluğunu değiştirir.
   revalidatePath("/dosya-islemleri");
+  revalidatePath("/arsiv-yerlesimi");
+  revalidatePath("/arsiv-simulatoru");
+  revalidatePath("/documents", "layout");
 
   return { status: "success", message: "Dosya yeni konuma taşındı." };
 }

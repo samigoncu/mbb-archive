@@ -27,6 +27,7 @@ public interface IRfc3161TimestampClient
 
 public interface IPdfSignatureValidator
 {
+    bool IsConfigured => false;
     Task<PdfSignatureValidationResult> ValidateAsync(
         ReadOnlyMemory<byte> pdf,
         CancellationToken cancellationToken);
@@ -69,7 +70,8 @@ public sealed record PdfSignatureValidationResult(
     EvidenceValidationStatus Status,
     string Provider,
     bool ProviderConfigured,
-    IReadOnlyList<string> Findings);
+    IReadOnlyList<string> Findings,
+    string? ReportJson = null);
 
 public sealed record IssuedTimestamp(
     byte[] Token,

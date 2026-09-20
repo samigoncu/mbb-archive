@@ -1,17 +1,8 @@
-import { apiGet, getPublicApiBaseUrl } from "@/lib/api/api-client";
+import { apiGet } from "@/lib/api/api-client";
 import type { PagedResult } from "@/features/documents/model/document";
 import type { FolderListItem } from "@/features/physical-archive/model/folder";
 
-export type AuditEntry = {
-  sequence: number;
-  messageId: string;
-  eventName: string;
-  documentId: string | null;
-  occurredAt: string;
-  receivedAt: string;
-  previousHash: string;
-  entryHash: string;
-};
+export type AuditEntry = import("@/features/audit/model/audit").AuditEvent;
 
 /** Belgenin denetim izi; append-only hash zincirinden okunur. */
 export async function getDocumentAuditTrail(
@@ -40,7 +31,12 @@ export async function getDocumentFolders(
 }
 
 /** Tarayıcının doğrudan yükleyeceği içerik adresi (iframe/indirme). */
-export function documentContentUrl(documentId: string, download = false): string {
-  const suffix = download ? "?download=true" : "";
-  return `${getPublicApiBaseUrl()}/documents/${documentId}/content${suffix}`;
+export function documentContentUrl(documentId: string, download = false, version?: number): string {
+  const query = new URLSearchParams();
+  if (download) query.set("download", "true");
+  if (version !== undefined) query.set("version", String(version));
+  const suffix = query.size ? `?${query}` : "";
+  // Uygulama içi uç: iframe ve indirme bağlantısı Authorization başlığı
+  // taşıyamaz, jeton sunucudaki yönlendirici uçta eklenir.
+  return `/api/documents/${encodeURIComponent(documentId)}/content${suffix}`;
 }

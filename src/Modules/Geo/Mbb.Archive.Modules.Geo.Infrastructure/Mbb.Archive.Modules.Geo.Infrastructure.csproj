@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Geo.Application/Mbb.Archive.Modules.Geo.Application.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Geo.Contracts/Mbb.Archive.Modules.Geo.Contracts.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq.csproj" />
+    <ProjectReference Include="../Mbb.Archive.Modules.Geo.Domain/Mbb.Archive.Modules.Geo.Domain.csproj" />
+  </ItemGroup>
+</Project>

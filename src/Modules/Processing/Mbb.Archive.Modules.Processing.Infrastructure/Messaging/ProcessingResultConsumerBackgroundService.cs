@@ -146,6 +146,18 @@ internal sealed class ProcessingResultConsumerBackgroundService
                     body,
                     cancellationToken),
 
+            "processing.text-extraction-completed.v1" =>
+                await ProcessTextExtractionCompletedAsync(
+                    services,
+                    body,
+                    cancellationToken),
+
+            "processing.text-extraction-failed.v1" =>
+                await ProcessTextExtractionFailedAsync(
+                    services,
+                    body,
+                    cancellationToken),
+
             _ => false
         };
     }
@@ -184,6 +196,52 @@ internal sealed class ProcessingResultConsumerBackgroundService
         CancellationToken cancellationToken)
     {
         var integrationEvent = Deserialize<PdfInspectionFailedIntegrationEvent>(body);
+
+        return ProcessFailureAsync(
+            services,
+            integrationEvent.EventId,
+            integrationEvent.EventName,
+            integrationEvent.ProcessingJobId,
+            integrationEvent.FailureCode,
+            integrationEvent.FailureDetail,
+            integrationEvent.OccurredAt,
+            cancellationToken);
+    }
+
+    private static async Task<bool> ProcessTextExtractionCompletedAsync(
+        IServiceProvider services,
+        byte[] body,
+        CancellationToken cancellationToken)
+    {
+        var integrationEvent = Deserialize<TextExtractionCompletedIntegrationEvent>(body);
+
+        var handler = services
+            .GetRequiredService<ApplyTextExtractionResultCommandHandler>();
+
+        var result = await handler.Handle(
+            new ApplyTextExtractionResultCommand(
+                integrationEvent.EventId,
+                integrationEvent.EventName,
+                integrationEvent.ProcessingJobId,
+                integrationEvent.Engine,
+                integrationEvent.EngineVersion,
+                integrationEvent.PageCount,
+                integrationEvent.CharacterCount,
+                integrationEvent.TextArtifact,
+                integrationEvent.OccurredAt,
+                integrationEvent.PdfArtifact, integrationEvent.JsonArtifact,
+                integrationEvent.AverageConfidence, integrationEvent.Languages),
+            cancellationToken);
+
+        return result.IsSuccess;
+    }
+
+    private static Task<bool> ProcessTextExtractionFailedAsync(
+        IServiceProvider services,
+        byte[] body,
+        CancellationToken cancellationToken)
+    {
+        var integrationEvent = Deserialize<TextExtractionFailedIntegrationEvent>(body);
 
         return ProcessFailureAsync(
             services,

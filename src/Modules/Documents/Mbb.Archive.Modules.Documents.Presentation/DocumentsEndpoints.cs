@@ -15,9 +15,16 @@ public static class DocumentsEndpoints
             .WithTags("Documents")
             .RequireAuthorization();
 
+        group.MapUploadPolicy();
+        group.MapDossiers();
         group.MapCreateDocument();
         group.MapGetDocuments();
+        group.MapDocumentRelations();
         group.MapGetDocumentById();
+        group.MapGetDocumentIntegrity();
+        group.MapGetDocumentVersions();
+        group.MapCancelDocumentVersion();
+        group.MapDocumentCancellation();
         group.MapGetDocumentContent();
         group.MapGetDocumentIngestion();
         group.MapStageDocumentFile();

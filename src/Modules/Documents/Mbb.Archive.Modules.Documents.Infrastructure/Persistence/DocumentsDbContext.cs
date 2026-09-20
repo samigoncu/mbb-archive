@@ -22,6 +22,7 @@ public sealed class DocumentsDbContext : DbContext, IUnitOfWork<DocumentsBoundar
     {
     }
 
+    internal DbSet<Mbb.Archive.Modules.Documents.Domain.Dossiers.DigitalDossier> Dossiers => Set<Mbb.Archive.Modules.Documents.Domain.Dossiers.DigitalDossier>();
     internal DbSet<Document> Documents => Set<Document>();
     internal DbSet<DocumentFileIngestion> FileIngestions => Set<DocumentFileIngestion>();
     internal DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
@@ -70,6 +71,10 @@ public sealed class DocumentsDbContext : DbContext, IUnitOfWork<DocumentsBoundar
             throw new ConcurrencyConflictException(
                 "The document changed while the request was being processed. Reload and retry.",
                 ex);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505", ConstraintName: "ux_document_relations_active_pair" })
+        {
+            throw new ConcurrencyConflictException("Bu belge ilişkisi başka bir işlemde kaydedilmiş. Listeyi yenileyin.", ex);
         }
         catch
         {

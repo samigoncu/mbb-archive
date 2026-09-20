@@ -49,9 +49,19 @@ namespace Mbb.Archive.Modules.Retention.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("reason");
 
+                    b.Property<string>("ReleaseReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("release_reason");
+
                     b.Property<DateTimeOffset?>("ReleasedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("released_at");
+
+                    b.Property<string>("ReleasedBy")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("released_by");
 
                     b.Property<Guid>("RetentionCaseId")
                         .HasColumnType("uuid")
@@ -89,6 +99,9 @@ namespace Mbb.Archive.Modules.Retention.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("concurrency_version");
 
+                    b.Property<bool>("DigitalPreservationRequired")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uuid")
                         .HasColumnName("document_id");
@@ -125,6 +138,222 @@ namespace Mbb.Archive.Modules.Retention.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status", "DueAt");
 
                     b.ToTable("cases", "retention");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Disposition.CommissionMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DelegateFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DelegateSubject")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("DelegateUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DelegationReference")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("ProcessId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessId", "Subject")
+                        .IsUnique();
+
+                    b.ToTable("commission_members", "retention");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Disposition.DispositionProcess", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("ApprovalReference")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("CommissionConfiguredBy")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("CommissionReference")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("CommissionValidFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CommissionValidUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CompletedBy")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<long>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ExecutionEvidenceDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExecutionEvidenceSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ExecutionEvidenceVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExecutionLocation")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ExecutionMethod")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ExecutionWitnesses")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("PackageCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PackageCreatedBy")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("PackageVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PackageVerifiedBy")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("PhysicalExecutedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ReceiptReference")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ReceivingArchive")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("RequiredReviews")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RetentionCaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("TransferManifestJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TransferManifestSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("TransferPackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TransferPackageSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long?>("TransferPackageSize")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RetentionCaseId")
+                        .IsUnique()
+                        .HasFilter("\"Status\" NOT IN ('Rejected', 'Completed')");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("disposition_processes", "retention");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Disposition.DispositionReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<bool>("Approved")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProcessId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessId", "Actor")
+                        .IsUnique();
+
+                    b.ToTable("disposition_reviews", "retention");
                 });
 
             modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Rules.RetentionRule", b =>
@@ -242,6 +471,40 @@ namespace Mbb.Archive.Modules.Retention.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("outbox_messages", "retention");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Disposition.CommissionMember", b =>
+                {
+                    b.HasOne("Mbb.Archive.Modules.Retention.Domain.Disposition.DispositionProcess", null)
+                        .WithMany("Members")
+                        .HasForeignKey("ProcessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Disposition.DispositionProcess", b =>
+                {
+                    b.HasOne("Mbb.Archive.Modules.Retention.Domain.Cases.RetentionCase", null)
+                        .WithMany()
+                        .HasForeignKey("RetentionCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Disposition.DispositionReview", b =>
+                {
+                    b.HasOne("Mbb.Archive.Modules.Retention.Domain.Disposition.DispositionProcess", null)
+                        .WithMany("Reviews")
+                        .HasForeignKey("ProcessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.Retention.Domain.Disposition.DispositionProcess", b =>
+                {
+                    b.Navigation("Members");
+
+                    b.Navigation("Reviews");
                 });
 #pragma warning restore 612, 618
         }

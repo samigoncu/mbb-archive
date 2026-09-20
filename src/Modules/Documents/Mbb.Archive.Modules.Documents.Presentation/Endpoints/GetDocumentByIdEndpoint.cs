@@ -25,6 +25,8 @@ internal static class GetDocumentByIdEndpoint
                         ? ApiResults.Problem(result.Error)
                         : Results.Ok(result.Value);
                 })
+            .RequireAuthorization("permission:documents.read")
+            .WithAccessAudit("access.document-viewed.v1", "document", "id")
             .WithName("GetDocumentById")
             .WithSummary("Gets a document by id.");
 

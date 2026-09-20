@@ -27,6 +27,7 @@ internal static class GetDocumentIngestionEndpoint
                         ? ApiResults.Problem(result.Error)
                         : Results.Ok(result.Value);
                 })
+            .RequireAuthorization("permission:documents.read")
             .WithName("GetDocumentIngestion")
             .WithSummary("Gets the current state of a document ingestion.");
 

@@ -37,7 +37,17 @@ internal sealed class EfProcessingJobRepository
         Guid documentVersionId,
         CancellationToken cancellationToken)
         => _dbContext.Jobs
+            .Include(x => x.Artifacts)
             .SingleOrDefaultAsync(
                 x => x.DocumentVersionId == documentVersionId,
                 cancellationToken);
+
+    public async Task<IReadOnlyList<ProcessingJob>> GetAwaitingIndexJobsByDocumentIdAsync(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.Jobs
+            .Where(x => x.DocumentId == documentId && x.Stage == ProcessingStage.AwaitingIndex)
+            .ToListAsync(cancellationToken);
+    }
 }

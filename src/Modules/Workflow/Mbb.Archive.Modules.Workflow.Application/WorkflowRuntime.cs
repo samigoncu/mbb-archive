@@ -34,36 +34,27 @@ public sealed class WorkflowRuntime
         WorkflowDefinition definition,
         WorkflowInstance instance,
         DateTimeOffset now)
-        => AdvanceFromCurrent(definition, instance, now);
+        => AdvanceFromCurrent(definition, instance, now, resume: true);
 
     private void AdvanceFromCurrent(
         WorkflowDefinition definition,
         WorkflowInstance instance,
-        DateTimeOffset now)
+        DateTimeOffset now, bool resume = false)
     {
         for (var i = 0; i < SafetyLimit; i++)
         {
             var current = definition.GetNode(instance.CurrentNodeId);
 
-            if (current.Type is
-                WorkflowNodeType.UserTask
-                or WorkflowNodeType.TimerCatchEvent
-                or WorkflowNodeType.EndEvent)
+            if (current.Type == WorkflowNodeType.EndEvent) return;
+            if (!(resume && i == 0))
             {
-                return;
-            }
-
-            if (current.Type == WorkflowNodeType.ServiceTask)
-            {
-                _outbox.Enqueue(
-                    new WorkflowServiceTaskRequestedIntegrationEvent(
-                        Guid.CreateVersion7(),
-                        instance.Id,
-                        current.Id,
-                        instance.DocumentId,
-                        current.ServiceOperation!,
-                        now));
-                return;
+                if (current.Type is WorkflowNodeType.UserTask or WorkflowNodeType.TimerCatchEvent) return;
+                if (current.Type == WorkflowNodeType.ServiceTask)
+                {
+                    _outbox.Enqueue(new WorkflowServiceTaskRequestedIntegrationEvent(Guid.CreateVersion7(), instance.Id,
+                        current.Id, instance.DocumentId, current.ServiceOperation!, now));
+                    return;
+                }
             }
 
             var outgoing = definition.GetOutgoing(current.Id);

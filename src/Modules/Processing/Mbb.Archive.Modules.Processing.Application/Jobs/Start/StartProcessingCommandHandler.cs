@@ -135,6 +135,19 @@ public sealed class StartProcessingCommandHandler
                         job.MimeType,
                         now));
                 break;
+
+            case ProcessingStage.TextExtractionRequested:
+                _outbox.Enqueue(
+                    new TextExtractionRequestedIntegrationEvent(
+                        Guid.CreateVersion7(),
+                        job.Id.Value,
+                        job.DocumentId,
+                        job.DocumentVersionId,
+                        job.OriginalStorageKey,
+                        job.Sha256Hash,
+                        job.MimeType,
+                        now));
+                break;
         }
     }
 }

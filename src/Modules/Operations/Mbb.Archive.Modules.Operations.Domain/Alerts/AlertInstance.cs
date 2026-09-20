@@ -43,6 +43,7 @@ public sealed class AlertInstance : AggregateRoot<Guid>
     {
         if (Status != AlertStatus.Open) throw new DomainRuleViolationException("Only an open alert can be acknowledged.");
         if (string.IsNullOrWhiteSpace(subject)) throw new DomainRuleViolationException("Acknowledging subject is required.");
+        if (subject.Length > 300 || (note?.Length ?? 0) > 2000) throw new DomainRuleViolationException("Üstlenen kimlik veya not çok uzun.");
         Acknowledgement = new(subject.Trim(), note?.Trim() ?? string.Empty, now); Status = AlertStatus.Acknowledged;
     }
 

@@ -7,14 +7,11 @@ export type CheckoutLoanInput = {
   dueAt: string;
 };
 
-export async function checkoutLoan(input: CheckoutLoanInput): Promise<{ id: string }> {
-  try {
-    return await apiPost<CheckoutLoanInput, { id: string }>(
-      `/physical-archive/folders/${input.folderId}/checkout`,
-      input,
-    );
-  } catch (error) {
-    console.warn("Backend checkout unavailable, generating client-side id:", error);
-    return { id: `loan-${Date.now()}` };
-  }
+export async function checkoutLoan(
+  input: CheckoutLoanInput,
+): Promise<{ id: string }> {
+  return apiPost<CheckoutLoanInput, { id: string }>(
+    `/physical-archive/folders/${input.folderId}/checkout`,
+    input,
+  );
 }

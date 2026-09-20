@@ -9,4 +9,5 @@ public sealed record ApplyProcessingReadyCommand(
     Guid DocumentVersionId,
     string? TextArtifactStorageKey,
     string? OcrJsonArtifactStorageKey,
-    DateTimeOffset OccurredAt) : ICommand;
+    DateTimeOffset OccurredAt,
+    string? MimeType = null) : ICommand;

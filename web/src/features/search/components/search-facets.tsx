@@ -32,7 +32,7 @@ export function SearchFacets({
   if (!hasAnyBucket) {
     return (
       <aside className="rounded-lg border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold">Filtreler</h2>
+        <h2 className="text-sm font-semibold">Sonuçları daraltın</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           Bu sonuç kümesi için filtre bulunmuyor. Belgeler sınıflandırıldıkça ve
           dosya yüklendikçe belge türü ve dosya planı filtreleri burada listelenir.
@@ -42,8 +42,8 @@ export function SearchFacets({
   }
 
   return (
-    <aside className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold">Filtreler</h2>
+    <aside className="flex flex-wrap gap-4 rounded-xl border border-border bg-card p-4">
+      <h2 className="text-sm font-semibold">Sonuçları daraltın</h2>
 
       {groups.map((group) =>
         group.buckets.length === 0 ? null : (
@@ -51,7 +51,7 @@ export function SearchFacets({
             <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               {group.title}
             </h3>
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex flex-wrap gap-2">
               {group.buckets.map((bucket) => {
                 const isActive = active[group.param] === bucket.key;
                 const params = new URLSearchParams(active);
@@ -68,9 +68,9 @@ export function SearchFacets({
                   <li key={bucket.key}>
                     <Link
                       href={`/arama?${params}`}
-                      aria-pressed={isActive}
+                      aria-current={isActive ? "true" : undefined}
                       className={cn(
-                        "flex min-h-9 items-center justify-between gap-2 rounded-md px-2 text-sm",
+                        "flex min-h-9 items-center justify-between gap-2 rounded-lg border border-border px-3 text-sm",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         isActive
                           ? "bg-accent font-medium text-accent-foreground"

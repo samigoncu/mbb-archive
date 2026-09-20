@@ -35,6 +35,8 @@ public sealed class RecoveryDrill : AggregateRoot<Guid>
         if (targetRpoMinutes <= 0 || targetRtoMinutes <= 0)
             throw new DomainRuleViolationException("RPO and RTO targets must be positive.");
 
+        if (backupReference.Length > 1000 || targetEnvironment.Length > 300 || string.IsNullOrWhiteSpace(requestedBy) || requestedBy.Length > 300)
+            throw new DomainRuleViolationException("Yedek, ortam veya işlemi yapan kullanıcı bilgisi geçersiz.");
         BackupReference = backupReference.Trim();
         TargetEnvironment = targetEnvironment.Trim();
         TargetRpoMinutes = targetRpoMinutes;
@@ -96,6 +98,15 @@ public sealed class RecoveryDrill : AggregateRoot<Guid>
 
         if (actualRpoMinutes < 0 || actualRtoMinutes < 0)
             throw new DomainRuleViolationException("Actual RPO/RTO values cannot be negative.");
+
+        if (string.IsNullOrWhiteSpace(evidenceReference) || evidenceReference.Length > 1000)
+            throw new DomainRuleViolationException("Tatbikat kanıt referansı zorunludur (en fazla 1000 karakter).");
+        if (string.IsNullOrWhiteSpace(notes) || notes.Length > 4000)
+            throw new DomainRuleViolationException("Geri yükleme ve doğrulama sonuçlarını açıklayın (en fazla 4000 karakter).");
+        if (passed && (actualRpoMinutes > TargetRpoMinutes || actualRtoMinutes > TargetRtoMinutes))
+            throw new DomainRuleViolationException("RPO veya RTO hedefi aşılmış tatbikat başarılı olarak kaydedilemez.");
+        if (now < StartedAt)
+            throw new DomainRuleViolationException("Tatbikat bitişi başlangıçtan önce olamaz.");
 
         Status = passed
             ? RecoveryDrillStatus.Passed

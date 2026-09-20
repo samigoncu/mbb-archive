@@ -43,6 +43,14 @@ public sealed class StageDocumentFileCommandHandler
         if (command.DeclaredSizeBytes <= 0)
             return Result<StageDocumentFileResponse>.Failure(StageDocumentFileErrors.InvalidSize);
 
+        if (string.IsNullOrWhiteSpace(command.SubmittedBy))
+        {
+            return Result<StageDocumentFileResponse>.Failure(
+                Error.Validation(
+                    "documents.submitter_required",
+                    "The submitting subject could not be resolved."));
+        }
+
         var document = await _documents.GetByIdAsync(
             new DocumentId(command.DocumentId),
             cancellationToken);
@@ -58,6 +66,8 @@ public sealed class StageDocumentFileCommandHandler
                 command.OriginalFileName,
                 command.ClientContentType,
                 command.DeclaredSizeBytes,
+                command.SubmittedBy,
+                command.VersionReason,
                 now);
 
             var staged = await _staging.StageAsync(

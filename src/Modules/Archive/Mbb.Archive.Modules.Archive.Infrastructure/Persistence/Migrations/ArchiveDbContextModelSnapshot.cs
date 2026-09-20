@@ -67,6 +67,11 @@ namespace Mbb.Archive.Modules.Archive.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("original_storage_key");
 
+                    b.Property<string>("OwnerUnitPath")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("owner_unit_path");
+
                     b.Property<string>("RetentionRuleCode")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -92,6 +97,8 @@ namespace Mbb.Archive.Modules.Archive.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DocumentVersionId")
                         .IsUnique();
+
+                    b.HasIndex("OwnerUnitPath");
 
                     b.ToTable("records", "archive");
                 });

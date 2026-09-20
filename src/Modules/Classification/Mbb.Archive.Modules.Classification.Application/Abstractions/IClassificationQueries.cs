@@ -14,6 +14,9 @@ public interface IClassificationQueries
         PageRequest page,
         CancellationToken cancellationToken);
     Task<MetadataSchemaDetails?> GetMetadataSchemaAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Konu koduna sınıflandırılmış belge var mı; silme korumasının ilk adımı.</summary>
+    Task<bool> HasDocumentClassificationsAsync(Guid filePlanItemId, CancellationToken cancellationToken);
 }
 
 public sealed record FilePlanListItem(

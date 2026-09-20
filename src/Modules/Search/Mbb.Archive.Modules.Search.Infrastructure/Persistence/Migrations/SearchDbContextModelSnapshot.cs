@@ -38,6 +38,11 @@ namespace Mbb.Archive.Modules.Search.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("document_version_id");
 
+                    b.Property<string>("GeoJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("geo_json");
+
                     b.Property<string>("MetadataJson")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -52,6 +57,11 @@ namespace Mbb.Archive.Modules.Search.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("ocr_json_artifact_storage_key");
+
+                    b.Property<string>("OwnerUnitPath")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("owner_unit_path");
 
                     b.Property<long>("Revision")
                         .IsConcurrencyToken()

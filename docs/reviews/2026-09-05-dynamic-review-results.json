@@ -1,0 +1,204 @@
+{
+  "collection_edit_share_revoke": "passed",
+  "retired_confirmed_demo_features": [
+    "hal-yolu",
+    "yesilyurt",
+    "battalgazi",
+    "hal-yolu-kavsagi"
+  ],
+  "active_geo_count": 0,
+  "document_view_audit_and_actor_filter": "passed",
+  "new_audit_sequence": 282,
+  "activity_groups": 25,
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "title": "Ana Sayfa · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/documents",
+      "status": 200,
+      "title": "Belgeler · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/dosya-islemleri",
+      "status": 200,
+      "title": "Dosya İşlemleri · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/koleksiyonlar",
+      "status": 200,
+      "title": "Koleksiyonlar · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/arama",
+      "status": 200,
+      "title": "Arama · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/harita",
+      "status": 200,
+      "title": "Haritada Ara · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/tarama",
+      "status": 200,
+      "title": "Tarama ve İndeksleme · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/odunc",
+      "status": 200,
+      "title": "Ödünç Sistemi · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/gorevlerim",
+      "status": 200,
+      "title": "Görevlerim · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/arsiv-yerlesimi",
+      "status": 200,
+      "title": "Arşiv Yerleşimi · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/arsiv-simulatoru",
+      "status": 200,
+      "title": "Arşiv Simülatörü · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/devir-imha",
+      "status": 200,
+      "title": "Devir ve İmha · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/devir-imha/islemler",
+      "status": 200,
+      "title": "Komisyon ve Devir İşlemleri · MBB",
+      "has_error": false
+    },
+    {
+      "path": "/kayit-beyani",
+      "status": 200,
+      "title": "Kayıt Beyanı · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/kanit",
+      "status": 200,
+      "title": "Kanıt &amp; İmza · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/raporlar",
+      "status": 200,
+      "title": "MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/tanimlamalar",
+      "status": 200,
+      "title": "Tanımlamalar · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/operations",
+      "status": 200,
+      "title": "Operasyon Merkezi · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/denetim",
+      "status": 200,
+      "title": "Denetim Kayıtları · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/ayarlar",
+      "status": 200,
+      "title": "Ayarlar ve Bağlantılar · MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/devir-imha/yeni",
+      "status": 200,
+      "title": "MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/tanimlamalar/birimler",
+      "status": 200,
+      "title": "MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/tanimlamalar/ustveri",
+      "status": 200,
+      "title": "MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/tanimlamalar/yetkiler",
+      "status": 200,
+      "title": "MBB Kurumsal Arşiv",
+      "has_error": false
+    },
+    {
+      "path": "/login",
+      "status": 200,
+      "title": "MBB Kurumsal Arşiv",
+      "has_error": false
+    }
+  ],
+  "new_audit_hashes_verified": 14,
+  "new_audit_hash_mismatches": [],
+  "new_audit_chain_breaks": [],
+  "final_api_health": {
+    "status": "Healthy",
+    "durationMs": 73.748,
+    "checks": [
+      {
+        "name": "rabbitmq",
+        "status": "Healthy",
+        "description": null
+      },
+      {
+        "name": "object-storage",
+        "status": "Healthy",
+        "description": null
+      },
+      {
+        "name": "opensearch",
+        "status": "Healthy",
+        "description": null
+      },
+      {
+        "name": "documents-postgres",
+        "status": "Healthy",
+        "description": "Documents PostgreSQL is reachable."
+      }
+    ]
+  },
+  "generic_resource_read_audit": "passed",
+  "backend_tests_passed": 151,
+  "backend_tests_skipped": 0,
+  "frontend_tests_passed": 27,
+  "scanner_contract_tests_passed": 5,
+  "backend_build_warnings": 0,
+  "backend_build_errors": 0,
+  "frontend_production_build": "passed",
+  "architecture": "passed",
+  "browser_visual_e2e": "unavailable"
+}

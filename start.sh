@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 LOGS="$ROOT/.local-data/logs"
-mkdir -p "$LOGS" "$ROOT/.local-data/staging" "$ROOT/.local-data/originals" "$ROOT/.local-data/artifacts"
+mkdir -p "$LOGS" "$ROOT/.local-data/staging" "$ROOT/.local-data/originals" "$ROOT/.local-data/artifacts" "$ROOT/.local-data/keys"
 
 # Dosya yolları mutlak verilir: API ve worker farklı çalışma dizinlerinden
 # başladığı için göreli yol ikisini ayrı klasörlere yazdırıyordu.
@@ -16,6 +16,8 @@ export Documents__FileStaging__RootPath="$ROOT/.local-data/staging"
 export Documents__OriginalStorage__LocalRootPath="$ROOT/.local-data/originals"
 export Search__Artifacts__LocalRootPath="$ROOT/.local-data/artifacts"
 export SecurityScan__StagingRootPath="$ROOT/.local-data/staging"
+# Sır şifreleme anahtarları: kaybolursa kayıtlı LDAP/CBS parolaları çözülemez.
+export DataProtection__KeyRingPath="$ROOT/.local-data/keys"
 
 say() { printf "\n\033[1;36m==> %s\033[0m\n" "$1"; }
 warn() { printf "\033[1;33m    %s\033[0m\n" "$1"; }
@@ -48,18 +50,35 @@ dotnet build Mbb.Archive.slnx -v quiet
 
 say "3/5 Veritabanı şeması"
 dotnet tool restore >/dev/null
+# Her modülün design-time factory'si bağlantıyı kendi ortam değişkeninden okur.
+# Modül adına karşılık gelen anahtarı vermezsek fabrika kimliksiz yedeğe düşer,
+# migration uygulanamaz ve şema sessizce eski kalır.
+migration_cs="Host=localhost;Port=5432;Database=mbb_archive;Username=mbb_archive;Password=change-me-local-only"
+migration_log="$(mktemp)"
+migration_failed=0
 for module in $(ls src/Modules); do
   migrations="$(find "src/Modules/$module" -type d -name Migrations 2>/dev/null | head -1)"
   [[ -z "$migrations" ]] && continue
   ls "$migrations"/*.cs >/dev/null 2>&1 || continue
   project="${migrations%/Persistence/Migrations}"
   case "$module" in AccessControl) context=AccessDbContext;; *) context="${module}DbContext";; esac
-  ConnectionStrings__Operations="Host=localhost;Port=5432;Database=mbb_archive;Username=mbb_archive;Password=change-me-local-only" \
-    dotnet ef database update --project "$project" --startup-project src/Host/Mbb.Archive.Api \
-      --context "$context" --no-build >/dev/null 2>&1 \
-    && printf "    %-24s ✓\n" "$module" \
-    || warn "$module migration uygulanamadı"
+  if env ASPNETCORE_ENVIRONMENT=Development \
+         "ConnectionStrings__Operations=$migration_cs" \
+         "ConnectionStrings__$module=$migration_cs" \
+       dotnet ef database update --project "$project" --startup-project src/Host/Mbb.Archive.Api \
+         --context "$context" --no-build >"$migration_log" 2>&1; then
+    printf "    %-24s ✓\n" "$module"
+  else
+    migration_failed=1
+    warn "$module migration uygulanamadı"
+    tail -3 "$migration_log" | sed 's/^/      /'
+  fi
 done
+rm -f "$migration_log"
+# set -e altında (( 0 )) betiği düşürür; koşul blok içinde değerlendirilir.
+if (( migration_failed )); then
+  warn "Şema güncel değil; yukarıdaki modüllerin ekranları hata verebilir."
+fi
 
 say "4/6 Doküman worker'ları (PDF metin çıkarımı + OCR)"
 docker compose -f deploy/compose.workers.yml --env-file .env up -d --build

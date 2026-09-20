@@ -18,7 +18,7 @@ internal static class CreateDocumentEndpoint
                     CancellationToken cancellationToken) =>
                 {
                     var result = await handler.Handle(
-                        new CreateDocumentCommand(request.Title),
+                        new CreateDocumentCommand(request.Title, request.OwnerUnitId, request.DossierId),
                         cancellationToken);
 
                     return result.IsFailure
@@ -27,11 +27,13 @@ internal static class CreateDocumentEndpoint
                             $"/api/v1/documents/{result.Value.Id}",
                             result.Value);
                 })
+            .RequireAuthorization("permission:documents.write")
+            .WithAccessAudit("access.document-created.v1", "document")
             .WithName("CreateDocument")
             .WithSummary("Creates a document metadata record.");
 
         return group;
     }
 
-    internal sealed record CreateDocumentRequest(string Title);
+    internal sealed record CreateDocumentRequest(string Title, Guid? OwnerUnitId = null, Guid? DossierId = null);
 }

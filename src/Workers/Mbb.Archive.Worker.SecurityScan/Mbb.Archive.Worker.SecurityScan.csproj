@@ -7,4 +7,10 @@
     <ProjectReference Include="../../BuildingBlocks/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq/Mbb.Archive.BuildingBlocks.Messaging.RabbitMq.csproj" />
     <ProjectReference Include="../../Modules/Documents/Mbb.Archive.Modules.Documents.Contracts/Mbb.Archive.Modules.Documents.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mbb.Archive.Worker.SecurityScan.UnitTests" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../Host/Shared/LocalStoragePaths.cs" Link="Hosting/LocalStoragePaths.cs" />
+  </ItemGroup>
 </Project>

@@ -56,9 +56,9 @@ def inspect_document(
         text_artifact = None
         json_artifact = None
 
-        # Gömülü metin katmanı varsa OCR istenmez; aranabilir metin burada
-        # üretilmezse belge içeriği hiç indekslenmez.
-        if inspection.has_embedded_text and inspection.page_texts:
+        # Only publish direct extraction when all pages can bypass OCR.
+        # Mixed documents produce one merged artifact in the OCR worker.
+        if not inspection.requires_ocr and inspection.has_embedded_text and inspection.page_texts:
             text_artifact, json_artifact = store_text_artifacts(
                 storage,
                 inspection,

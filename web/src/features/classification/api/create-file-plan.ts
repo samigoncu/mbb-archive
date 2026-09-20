@@ -1,3 +1,5 @@
+"use server";
+
 import { apiPost } from "@/lib/api/api-client";
 
 export type CreateFilePlanInput = {
@@ -9,14 +11,11 @@ export type CreateFilePlanInput = {
   effectiveTo?: string | null;
 };
 
-export async function createFilePlan(input: CreateFilePlanInput): Promise<{ id: string }> {
-  try {
-    return await apiPost<CreateFilePlanInput, { id: string }>(
-      "/classification/file-plans",
-      input,
-    );
-  } catch (error) {
-    console.warn("Backend unavailable, generating client-side id for file plan:", error);
-    return { id: `fp-${Date.now()}` };
-  }
+export async function createFilePlan(
+  input: CreateFilePlanInput,
+): Promise<{ id: string }> {
+  return await apiPost<CreateFilePlanInput, { id: string }>(
+    "/classification/file-plans",
+    input,
+  );
 }

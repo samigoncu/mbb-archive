@@ -42,8 +42,28 @@ internal sealed class DocumentVersionConfiguration : IEntityTypeConfiguration<Do
         builder.Property(x => x.SizeBytes)
             .HasColumnName("size_bytes");
 
+        builder.Property(x => x.CreatedBy)
+            .HasColumnName("created_by")
+            .HasMaxLength(200)
+            .IsRequired();
+
+        builder.Property(x => x.Reason)
+            .HasColumnName("reason")
+            .HasMaxLength(1000);
+
         builder.Property(x => x.CreatedAt)
             .HasColumnName("created_at");
+        builder.Property(x => x.StorageVersionId).HasColumnName("storage_version_id").HasMaxLength(1024);
+        builder.Property(x => x.ProtectionCheckedAt).HasColumnName("protection_checked_at");
+        builder.Property(x => x.ProtectedUntil).HasColumnName("protected_until");
+        builder.Property(x => x.StorageLegalHold).HasColumnName("storage_legal_hold");
+        builder.Property(x => x.OwnsStorageLegalHold).HasColumnName("owns_storage_legal_hold");
+        builder.Property(x => x.ProtectionError).HasColumnName("protection_error").HasMaxLength(1000);
+        builder.Property(x => x.CancelledAt).HasColumnName("cancelled_at");
+        builder.Property(x => x.CancelledBy).HasColumnName("cancelled_by").HasMaxLength(200);
+        builder.Property(x => x.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(1000);
+        builder.Property(x => x.CancellationRequestId).HasColumnName("cancellation_request_id");
+        builder.Property(x => x.ReplacementVersionNumber).HasColumnName("replacement_version_number");
 
         builder.HasIndex(x => new { x.DocumentId, x.VersionNumber })
             .IsUnique()

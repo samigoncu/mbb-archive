@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Mbb.Archive.Modules.Documents.Contracts;
 using Mbb.Archive.Modules.Search.Domain.Documents;
 using Mbb.Archive.Modules.Search.Infrastructure.Artifacts;
 using Mbb.Archive.Modules.Search.Infrastructure.OpenSearch;
+using Mbb.Archive.Modules.Search.Application.Abstractions;
 
 namespace Mbb.Archive.Modules.Search.Infrastructure.Indexing;
 
@@ -9,20 +11,36 @@ internal sealed class SearchIndexDocumentFactory
 {
     private static readonly JsonSerializerOptions JsonOptions=new(JsonSerializerDefaults.Web);
     private readonly ISearchArtifactStore _artifacts;
-    public SearchIndexDocumentFactory(ISearchArtifactStore artifacts){_artifacts=artifacts;}
+    private readonly IDocumentSearchDatesProvider _dates;
+    private readonly ICurrentVersionProjectionSource _versions;
+    public SearchIndexDocumentFactory(ISearchArtifactStore artifacts, IDocumentSearchDatesProvider dates, ICurrentVersionProjectionSource versions){_artifacts=artifacts;_dates=dates;_versions=versions;}
 
     public async Task<OpenSearchIndexDocument> CreateAsync(SearchDocument source,CancellationToken ct)
     {
+        var current = await _versions.GetAsync(source.Id, ct);
+        var dates = await _dates.GetAsync(source.Id, ct)
+            ?? throw new InvalidOperationException("Document dates are not available from the document source.");
+        var textKey = current?.TextKey; var ocrKey = current?.OcrKey;
         var body=string.Empty;var pages=new List<OpenSearchPage>();
-        if(!string.IsNullOrWhiteSpace(source.TextArtifactStorageKey))body=await _artifacts.ReadTextAsync(source.TextArtifactStorageKey,ct);
-        if(!string.IsNullOrWhiteSpace(source.OcrJsonArtifactStorageKey))
+        if(!string.IsNullOrWhiteSpace(textKey))body=await _artifacts.ReadTextAsync(textKey,ct);
+        if(!string.IsNullOrWhiteSpace(ocrKey))
         {
-            var bytes=await _artifacts.ReadBytesAsync(source.OcrJsonArtifactStorageKey,ct);using var json=JsonDocument.Parse(bytes);
+            var bytes=await _artifacts.ReadBytesAsync(ocrKey,ct);using var json=JsonDocument.Parse(bytes);
             if(json.RootElement.TryGetProperty("pages",out var pageArray))foreach(var page in pageArray.EnumerateArray()){var number=page.TryGetProperty("page_number",out var n)?n.GetInt32():page.GetProperty("pageNumber").GetInt32();var text=page.TryGetProperty("text",out var t)?t.GetString()??string.Empty:string.Empty;pages.Add(new OpenSearchPage(number,text));}
         }
         var classifications=JsonSerializer.Deserialize<List<SearchClassificationEntry>>(source.ClassificationJson,JsonOptions)??[];
         var metadata=JsonSerializer.Deserialize<List<SearchMetadataSchemaEntry>>(source.MetadataJson,JsonOptions)??[];
-        return new OpenSearchIndexDocument(source.Id,source.DocumentVersionId,source.Title,source.MimeType,body,pages,classifications.Select(x=>$"{x.FilePlanCode}:{x.ItemCode}").Distinct().ToArray(),classifications.Select(x=>$"{x.FilePlanName} {x.ItemTitle}").Distinct().ToArray(),FlattenMetadata(metadata),source.TextArtifactStorageKey,source.OcrJsonArtifactStorageKey,source.Revision,source.UpdatedAt);
+        var geo=ReadGeoRelations(source.GeoJson);
+        return new OpenSearchIndexDocument(source.Id,current?.VersionId,source.Title,current?.MimeType,body,pages,classifications.Select(x=>$"{x.FilePlanCode}:{x.ItemCode}").Distinct().ToArray(),classifications.Select(x=>$"{x.FilePlanName} {x.ItemTitle}").Distinct().ToArray(),FlattenMetadata(metadata),geo.Select(x=>new OpenSearchGeoEntry(x.GeoEntityId.ToString("D"),x.Name,x.EntityType,x.LayerName,x.RelationType)).ToArray(),source.OwnerUnitPath,current?.TextKey,current?.OcrKey,source.Revision,source.UpdatedAt,dates.CreatedAt,dates.IngestedAt);
+    }
+
+    internal static IReadOnlyList<SearchGeoRelationEntry> ReadGeoRelations(string json)
+    {
+        using var value = JsonDocument.Parse(json);
+        // Older projections represented an empty relation set as {}.
+        // Only that exact empty form is compatible; malformed data still fails.
+        if (value.RootElement.ValueKind == JsonValueKind.Object && !value.RootElement.EnumerateObject().Any()) return [];
+        return JsonSerializer.Deserialize<List<SearchGeoRelationEntry>>(json, JsonOptions) ?? [];
     }
 
     private static IReadOnlyList<OpenSearchMetadataEntry> FlattenMetadata(IEnumerable<SearchMetadataSchemaEntry> schemas)

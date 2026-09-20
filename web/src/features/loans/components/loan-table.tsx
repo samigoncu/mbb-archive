@@ -95,6 +95,7 @@ export function LoanTable({ loans }: { loans: LoanDetailsItem[] }) {
                   <ReturnLoanButton
                     loanId={loan.id}
                     folderBarcode={loan.folderBarcode}
+                    borrowerSubjectId={loan.borrowerSubjectId}
                   />
                 )}
               </TableCell>

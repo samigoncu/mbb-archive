@@ -1,13 +1,8 @@
 import { apiGet } from "@/lib/api/api-client";
+import type { CurrentUser } from "@/features/access/model/current-user";
 
-export type CurrentUser = {
-  subject: string;
-  roles: string[];
-  permissions: string[];
-  isAuthenticated: boolean;
-  authenticationMode: "Jwt" | "Development";
-  isBootstrapAdministrator: boolean;
-};
+export { canSee } from "@/features/access/model/current-user";
+export type { CurrentUser } from "@/features/access/model/current-user";
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
@@ -17,20 +12,4 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     // backend policy'sinde yeniden verilir.
     return null;
   }
-}
-
-/**
- * Menü görünürlüğü. Bootstrap administrator tüm izinleri karşılar; izin listesi
- * boşsa (henüz rol tanımlanmamışsa) kısıtlama uygulanmaz.
- */
-export function canSee(user: CurrentUser | null, permission?: string): boolean {
-  if (!permission || !user) {
-    return true;
-  }
-
-  if (user.isBootstrapAdministrator || user.permissions.length === 0) {
-    return true;
-  }
-
-  return user.permissions.includes(permission.toLowerCase());
 }

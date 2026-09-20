@@ -15,6 +15,8 @@ public sealed class DocumentFileIngestion : AggregateRoot<DocumentFileIngestionI
         string originalFileName,
         string clientContentType,
         long declaredSizeBytes,
+        string submittedBy,
+        string? versionReason,
         DateTimeOffset createdAt)
         : base(id)
     {
@@ -30,7 +32,17 @@ public sealed class DocumentFileIngestion : AggregateRoot<DocumentFileIngestionI
         if (declaredSizeBytes <= 0)
             throw new DomainRuleViolationException("Declared file size must be greater than zero.");
 
+        if (string.IsNullOrWhiteSpace(submittedBy))
+            throw new DomainRuleViolationException("Submitting subject is required.");
+
+        if (versionReason is { Length: > 1000 })
+            throw new DomainRuleViolationException("Version reason cannot exceed 1000 characters.");
+
         DocumentId = documentId;
+        SubmittedBy = submittedBy.Trim();
+        VersionReason = string.IsNullOrWhiteSpace(versionReason)
+            ? null
+            : versionReason.Trim();
         OriginalFileName = originalFileName.Trim();
         ClientContentType = clientContentType.Trim();
         DeclaredSizeBytes = declaredSizeBytes;
@@ -40,6 +52,13 @@ public sealed class DocumentFileIngestion : AggregateRoot<DocumentFileIngestionI
     }
 
     public DocumentId DocumentId { get; private set; }
+
+    /// <summary>§5 gereği sürümü kimin yüklediği kaydedilir.</summary>
+    public string SubmittedBy { get; private set; } = string.Empty;
+
+    /// <summary>§5 gereği düzeltme gerekçesi; ilk sürümde boş olabilir.</summary>
+    public string? VersionReason { get; private set; }
+
     public string OriginalFileName { get; private set; } = string.Empty;
 
     /// <summary>
@@ -70,6 +89,8 @@ public sealed class DocumentFileIngestion : AggregateRoot<DocumentFileIngestionI
         string originalFileName,
         string clientContentType,
         long declaredSizeBytes,
+        string submittedBy,
+        string? versionReason,
         DateTimeOffset now)
         => new(
             id,
@@ -77,6 +98,8 @@ public sealed class DocumentFileIngestion : AggregateRoot<DocumentFileIngestionI
             originalFileName,
             clientContentType,
             declaredSizeBytes,
+            submittedBy,
+            versionReason,
             now);
 
 

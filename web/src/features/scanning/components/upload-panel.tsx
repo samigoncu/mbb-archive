@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Upload } from "lucide-react";
+import { documentUploadAccept } from "@/features/documents/model/office-formats";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,8 +36,8 @@ export function UploadPanel() {
       <div>
         <h2 className="text-sm font-semibold">Belge Yükle</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          PDF veya taranmış görsel yükleyin. Dosya güvenlik taramasından geçtikten
-          sonra arşive alınır, OCR uygulanır ve aramaya indekslenir.
+          PDF, Office belgesi veya taranmış görsel yükleyin. Orijinal korunur;
+          Office belgeleri için PDF kopyası hazırlanır ve içerik aramaya eklenir.
         </p>
       </div>
 
@@ -56,7 +57,7 @@ export function UploadPanel() {
           name="file"
           type="file"
           required
-          accept="application/pdf,image/tiff,image/jpeg,image/png"
+          accept={documentUploadAccept}
           className="file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-sm"
         />
       </div>

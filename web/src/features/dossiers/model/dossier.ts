@@ -1,0 +1,2 @@
+export type ArchiveUnit = { id: string; name: string; path: string; parentId: string | null; isActive: boolean; isPrimary: boolean; canManageDocuments: boolean; canManagePhysical: boolean };
+export type DigitalDossier = { id: string; ownerUnitId: string; ownerUnitName: string; filePlanId: string; filePlanItemId: string; filePlanVersion: string; filePlanCode: string; filePlanTitle: string; title: string; year: number; documentCount: number };

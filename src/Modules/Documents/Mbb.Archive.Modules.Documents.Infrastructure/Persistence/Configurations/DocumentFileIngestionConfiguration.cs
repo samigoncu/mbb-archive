@@ -28,6 +28,15 @@ internal sealed class DocumentFileIngestionConfiguration
             .HasMaxLength(500)
             .IsRequired();
 
+        builder.Property(x => x.SubmittedBy)
+            .HasColumnName("submitted_by")
+            .HasMaxLength(200)
+            .IsRequired();
+
+        builder.Property(x => x.VersionReason)
+            .HasColumnName("version_reason")
+            .HasMaxLength(1000);
+
         builder.Property(x => x.ClientContentType)
             .HasColumnName("client_content_type")
             .HasMaxLength(255)

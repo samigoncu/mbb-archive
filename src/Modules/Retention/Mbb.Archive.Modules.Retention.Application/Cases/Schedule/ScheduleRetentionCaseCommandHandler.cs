@@ -1,2 +1,39 @@
-using Mbb.Archive.Modules.Retention.Application;
-using Mbb.Archive.BuildingBlocks.Application;using Mbb.Archive.Modules.Retention.Application.Abstractions;using Mbb.Archive.Modules.Retention.Domain.Cases;namespace Mbb.Archive.Modules.Retention.Application.Cases.Schedule;public sealed class ScheduleRetentionCaseCommandHandler:ICommandHandler<ScheduleRetentionCaseCommand,Guid>{private readonly IRetentionRepository _repo;private readonly IInbox<RetentionBoundary> _inbox;private readonly IUnitOfWork<RetentionBoundary> _uow;public ScheduleRetentionCaseCommandHandler(IRetentionRepository repo,IInbox<RetentionBoundary> inbox,IUnitOfWork<RetentionBoundary> uow){_repo=repo;_inbox=inbox;_uow=uow;}public async Task<Result<Guid>> Handle(ScheduleRetentionCaseCommand c,CancellationToken ct){if(await _inbox.HasProcessedAsync(c.MessageId,ct)){var existing=await _repo.GetCaseByRecordAsync(c.ArchiveRecordId,ct);return existing is null?Result<Guid>.Failure(Error.Conflict("retention.message_processed","Message already processed.")):Result<Guid>.Success(existing.Id);}var rule=await _repo.GetRuleByCodeAsync(c.RuleCode,ct);if(rule is null)return Result<Guid>.Failure(Error.NotFound("retention.rule_not_found","Retention rule was not found."));var item=RetentionCase.Schedule(c.ArchiveRecordId,c.DocumentId,rule,c.DeclaredAt);await _repo.AddCaseAsync(item,ct);_inbox.MarkProcessed(c.MessageId,c.EventName,c.DeclaredAt);await _uow.SaveChangesAsync(ct);return Result<Guid>.Success(item.Id);}}
+using Mbb.Archive.BuildingBlocks.Application;
+using Mbb.Archive.Modules.Retention.Application.Abstractions;
+using Mbb.Archive.Modules.Retention.Domain.Cases;
+
+namespace Mbb.Archive.Modules.Retention.Application.Cases.Schedule;
+
+public sealed class ScheduleRetentionCaseCommandHandler(
+    IRetentionRepository repository,
+    IInbox<RetentionBoundary> inbox,
+    IUnitOfWork<RetentionBoundary> unitOfWork) : ICommandHandler<ScheduleRetentionCaseCommand, Guid>
+{
+    public async Task<Result<Guid>> Handle(ScheduleRetentionCaseCommand command, CancellationToken ct)
+    {
+        var existing = await repository.GetCaseByRecordAsync(command.ArchiveRecordId, ct);
+        if (existing is not null)
+        {
+            // PostgreSQL timestamps retain microseconds; event JSON can retain 100ns ticks.
+            if (existing.DocumentId != command.DocumentId || existing.RuleCode != command.RuleCode
+                || existing.TriggerAt.UtcTicks / 10 != command.DeclaredAt.UtcTicks / 10)
+                return Result<Guid>.Failure(Error.Conflict("retention.declaration_mismatch", "Bu kaydın mevcut saklama beyanı farklıdır."));
+            if (!await inbox.HasProcessedAsync(command.MessageId, ct))
+            {
+                inbox.MarkProcessed(command.MessageId, command.EventName, command.DeclaredAt);
+                await unitOfWork.SaveChangesAsync(ct);
+            }
+            return Result<Guid>.Success(existing.Id);
+        }
+        if (await inbox.HasProcessedAsync(command.MessageId, ct))
+            return Result<Guid>.Failure(Error.Conflict("retention.message_processed", "İşlenmiş mesajın saklama kaydı bulunamadı."));
+        var rule = await repository.GetRuleByCodeAsync(command.RuleCode, ct);
+        if (rule is null)
+            return Result<Guid>.Failure(Error.NotFound("retention.rule_not_found", "Saklama kuralı bulunamadı."));
+        var item = RetentionCase.Schedule(command.ArchiveRecordId, command.DocumentId, rule, command.DeclaredAt);
+        await repository.AddCaseAsync(item, ct);
+        inbox.MarkProcessed(command.MessageId, command.EventName, command.DeclaredAt);
+        await unitOfWork.SaveChangesAsync(ct);
+        return Result<Guid>.Success(item.Id);
+    }
+}

@@ -5,18 +5,23 @@ from models import PageResult,Word
 
 class TesseractProvider:
     name="Tesseract"; version="5.x"
-    def __init__(self,languages:str): self.languages=languages
-    def recognize(self,page_number:int,image:Image.Image)->PageResult:
+    def __init__(self,languages:str):
+        self.languages=languages
+        self.version=subprocess.run(["tesseract","--version"],capture_output=True,text=True,check=True).stdout.splitlines()[0].removeprefix("tesseract ")
+    def recognize(self,page_number:int,image:Image.Image,*,sparse:bool=False)->PageResult:
         with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as temp: path=temp.name
         try:
-            image.save(path,"PNG"); completed=subprocess.run(["tesseract",path,"stdout","-l",self.languages,"--psm","3","tsv"],capture_output=True,text=True,check=True)
-            words=[]; texts=[]; confidences=[]
+            image.save(path,"PNG"); completed=subprocess.run(["tesseract",path,"stdout","-l",self.languages,"--psm","11" if sparse else "3","tsv"],capture_output=True,text=True,check=True)
+            words=[]; texts=[]; confidences=[]; previous_line=None
             for row in csv.DictReader(io.StringIO(completed.stdout),delimiter="	"):
                 if row.get("level")!="5": continue
                 text=(row.get("text") or "").strip()
                 try: conf=float(row.get("conf") or -1)
                 except ValueError: conf=-1
                 if not text or conf<0: continue
+                line=(row.get("block_num"),row.get("par_num"),row.get("line_num"))
+                if previous_line is not None and line != previous_line: texts.append("\n")
+                previous_line=line
                 c=max(0,min(100,conf))/100.0; words.append(Word(text,c,int(row["left"]),int(row["top"]),int(row["width"]),int(row["height"]))); texts.append(text); confidences.append(c)
             avg=sum(confidences)/len(confidences) if confidences else 0.0
             return PageResult(page_number,image.width,image.height," ".join(texts),avg,words)
@@ -29,7 +34,7 @@ class PaddleOcrProvider:
     def __init__(self,languages:str):
         from paddleocr import PaddleOCR
         self.languages=languages; self._ocr=PaddleOCR(use_doc_orientation_classify=False,use_doc_unwarping=False,use_textline_orientation=False,engine="paddle")
-    def recognize(self,page_number:int,image:Image.Image)->PageResult:
+    def recognize(self,page_number:int,image:Image.Image,*,sparse:bool=False)->PageResult:
         with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as temp: path=temp.name
         try:
             image.save(path,"PNG"); outputs=list(self._ocr.predict(path)); words=[]; texts=[]; confidences=[]

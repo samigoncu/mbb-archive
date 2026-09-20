@@ -1,14 +1,9 @@
-const DEFAULT_API_BASE_URL = "http://localhost:5080/api/v1";
+import { ApiError } from "@/lib/api/api-error";
+import { getAccessToken } from "@/lib/auth/session";
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly code?: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError } from "@/lib/api/api-error";
+
+const DEFAULT_API_BASE_URL = "http://localhost:5080/api/v1";
 
 export async function apiGet<T>(
   path: string,
@@ -36,6 +31,22 @@ export async function apiPost<TRequest, TResponse>(
   });
 }
 
+export async function apiPut<TRequest, TResponse>(
+  path: string,
+  body: TRequest,
+  init?: RequestInit,
+): Promise<TResponse> {
+  return apiRequest<TResponse>(path, {
+    ...init,
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function apiDelete<TResponse = void>(
   path: string,
   init?: RequestInit,
@@ -46,13 +57,6 @@ export async function apiDelete<TResponse = void>(
   });
 }
 
-export function getPublicApiBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    DEFAULT_API_BASE_URL
-  );
-}
-
 async function apiRequest<T>(
   path: string,
   init: RequestInit,
@@ -61,6 +65,7 @@ async function apiRequest<T>(
     ...init,
     headers: {
       Accept: "application/json",
+      ...(await authorizationHeader()),
       ...init.headers,
     },
   });
@@ -81,6 +86,21 @@ async function apiRequest<T>(
   }
 
   return (await response.json()) as T;
+}
+
+/**
+ * Oturumdaki erişim jetonu. Kimlik sağlayıcı yapılandırılmamışsa boş döner ve
+ * istek başlıksız gider; API o ortamda geliştirme kimliğiyle çalışır.
+ *
+ * <para>
+ * Bu yalnızca sunucu tarafında çalışır: tarayıcıdan API'ye doğrudan istek
+ * atılmaz, jeton httpOnly çerezde kalır ve istemci paketine hiç düşmez.
+ * </para>
+ */
+export async function authorizationHeader(): Promise<HeadersInit> {
+  const token = await getAccessToken();
+
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function getServerApiBaseUrl(): string {

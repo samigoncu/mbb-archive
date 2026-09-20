@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <InternalsVisibleTo Include="Mbb.Archive.Modules.Search.UnitTests" />
+    <ProjectReference Include="../../Geo/Mbb.Archive.Modules.Geo.Contracts/Mbb.Archive.Modules.Geo.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

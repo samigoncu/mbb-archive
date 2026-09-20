@@ -3,4 +3,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mbb.Archive.BuildingBlocks.UnitTests" />
+  </ItemGroup>
 </Project>

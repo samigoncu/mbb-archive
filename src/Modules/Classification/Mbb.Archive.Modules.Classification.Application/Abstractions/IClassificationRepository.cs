@@ -13,4 +13,6 @@ public interface IClassificationRepository
     Task AddClassificationAsync(DocumentClassification classification, CancellationToken cancellationToken);
     Task AddMetadataSetAsync(DocumentMetadataSet metadataSet, CancellationToken cancellationToken);
     Task<DocumentMetadataSet?> GetMetadataSetAsync(Guid documentId, MetadataSchemaId schemaId, CancellationToken cancellationToken);
+    Task<bool> HasDocumentMetadataAsync(MetadataSchemaId schemaId, CancellationToken cancellationToken);
+    void RemoveSchema(MetadataSchema schema);
 }

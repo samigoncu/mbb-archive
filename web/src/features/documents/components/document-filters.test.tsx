@@ -1,0 +1,21 @@
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+const push = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams("ownerUnitId=bid&filePlanCode=TEST.01&dossierId=dosya&search=eski&page=3&selected=belge&view=list&unfiled=true") }));
+import { DocumentFilters } from "./document-filters";
+afterEach(() => { cleanup(); push.mockClear(); });
+it("belge araması ve temizleme seçili birim ve dijital dosyayı korur", () => {
+  render(<DocumentFilters />);
+  fireEvent.change(screen.getByLabelText("Başlıkta ara"), { target: { value: "Yeni" } });
+  fireEvent.click(screen.getByRole("button", { name: "Uygula" }));
+  const url = new URL(push.mock.calls[0][0], "http://localhost");
+  expect(url.searchParams.get("ownerUnitId")).toBe("bid");
+  expect(url.searchParams.get("dossierId")).toBe("dosya");
+  expect(url.searchParams.get("search")).toBe("Yeni");
+  expect(url.searchParams.get("view")).toBe("list");
+  expect(url.searchParams.get("unfiled")).toBe("true");
+  expect(url.searchParams.has("page")).toBe(false);
+  expect(url.searchParams.has("selected")).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Temizle" }));
+  expect(push.mock.calls[1][0]).toBe("/documents?ownerUnitId=bid&filePlanCode=TEST.01&dossierId=dosya&unfiled=true&view=list");
+});

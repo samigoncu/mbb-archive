@@ -2,13 +2,18 @@ using Microsoft.EntityFrameworkCore;
 using Mbb.Archive.Modules.Search.Application.Abstractions;
 using Mbb.Archive.Modules.Search.Domain.Documents;
 using Mbb.Archive.Modules.Search.Infrastructure.Persistence.Indexing;
+using Mbb.Archive.Modules.Documents.Contracts;
+using Mbb.Archive.Modules.Processing.Contracts;
 
 namespace Mbb.Archive.Modules.Search.Infrastructure.Persistence;
 
 internal sealed class EfSearchDocumentRepository : ISearchDocumentRepository, ISearchProjectionQueries
 {
     private readonly SearchDbContext _dbContext;
-    public EfSearchDocumentRepository(SearchDbContext dbContext){_dbContext=dbContext;}
+    private readonly IArchiveFilingCatalog _documents;
+    private readonly IProcessedVersionArtifacts _artifacts;
+    public EfSearchDocumentRepository(SearchDbContext dbContext, IArchiveFilingCatalog documents, IProcessedVersionArtifacts artifacts)
+    { _dbContext=dbContext; _documents=documents; _artifacts=artifacts; }
 
     public Task<SearchDocument?> GetAsync(Guid documentId,CancellationToken cancellationToken)
         => _dbContext.Documents.SingleOrDefaultAsync(x=>x.Id==documentId,cancellationToken);
@@ -30,6 +35,14 @@ internal sealed class EfSearchDocumentRepository : ISearchDocumentRepository, IS
         else request.Refresh(revision,requestedAt);
     }
 
-    public Task<string?> GetOcrJsonStorageKeyAsync(Guid documentId,CancellationToken cancellationToken)
-        => _dbContext.Documents.AsNoTracking().Where(x=>x.Id==documentId).Select(x=>x.OcrJsonArtifactStorageKey).SingleOrDefaultAsync(cancellationToken);
+    private async Task<ProcessedVersionArtifacts?> CurrentArtifacts(Guid id, CancellationToken ct)
+    {
+        var document = await _documents.GetDocumentAsync(id, ct);
+        return document?.LatestVersionId is Guid version ? await _artifacts.GetAsync(id, version, ct) : null;
+    }
+    public async Task<string?> GetOcrJsonStorageKeyAsync(Guid documentId,CancellationToken cancellationToken)
+        => (await CurrentArtifacts(documentId, cancellationToken))?.OcrKey;
+
+    public async Task<string?> GetTextStorageKeyAsync(Guid documentId,CancellationToken cancellationToken)
+        => (await CurrentArtifacts(documentId, cancellationToken))?.TextKey;
 }

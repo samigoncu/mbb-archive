@@ -19,6 +19,31 @@ public static class WorkflowEndpoints
             .WithTags("Workflow")
             .RequireAuthorization();
 
+        group.MapGet("/work-items/mine", GetMyWorkItems)
+            .RequireAuthorization("permission:workflow.read");
+
+        group.MapGet("/documents/{documentId:guid}/history", async (Guid documentId, int? page, int? pageSize,
+            DocumentWorkflowHistoryHandler handler, CancellationToken ct) =>
+        {
+            var request = PageRequest.Create(page ?? 1, pageSize ?? 25);
+            if (request.IsFailure) return ApiResults.Problem(request.Error);
+            var result = await handler.Handle(documentId, request.Value, ct);
+            return result.IsFailure ? ApiResults.Problem(result.Error) : Results.Ok(result.Value);
+        }).RequireAuthorization("permission:workflow.read")
+            .WithAccessAudit("access.document-workflow-viewed.v1", "document", "documentId");
+
+        group.MapGet("/assignees", async (Guid documentId, string? permission, IWorkflowAssignmentDirectory directory, CancellationToken ct) =>
+            Results.Ok(await directory.GetCandidatesAsync(documentId, ct, permission)))
+            .RequireAuthorization("permission:workflow.manage");
+        group.MapPost("/assigned-tasks", async (CreateAssignedWorkflowTaskRequest request, WorkflowAssignmentHandler handler, CancellationToken ct) =>
+            Created(await handler.CreateAsync(request, ct), "/api/v1/workflows/instances"))
+            .RequireAuthorization("permission:workflow.manage")
+            .WithAccessAudit("access.workflow-task-created.v1", "workflow-instance");
+        group.MapPost("/instances/{id:guid}/assign", async (Guid id, AssignWorkflowTaskRequest request, WorkflowAssignmentHandler handler, CancellationToken ct) =>
+            NoContent(await handler.AssignAsync(id, request, ct)))
+            .RequireAuthorization("permission:workflow.manage")
+            .WithAccessAudit("access.workflow-task-assigned.v1", "workflow-instance", "id");
+
         group.MapPost("/definitions", CreateDefinition)
             .RequireAuthorization("permission:workflow.manage");
 
@@ -35,12 +60,26 @@ public static class WorkflowEndpoints
             .RequireAuthorization("permission:workflow.start");
 
         group.MapPost("/instances/{id:guid}/complete-task", CompleteTask)
-            .RequireAuthorization("permission:workflow.task.complete");
+            .RequireAuthorization("permission:workflow.task.complete")
+            .WithAccessAudit("access.workflow-task-completed.v1", "workflow-instance", "id");
 
         group.MapPost("/instances/{id:guid}/complete-service-task", CompleteService)
             .RequireAuthorization("permission:workflow.service.complete");
 
         return endpoints;
+    }
+
+    private static async Task<IResult> GetMyWorkItems(
+        int? take,
+        string? status,
+        GetMyWorkItemsQueryHandler handler,
+        CancellationToken ct)
+    {
+        var result = await handler.Handle(new GetMyWorkItemsQuery(take ?? 100, status ?? "all"), ct);
+
+        return result.IsFailure
+            ? ApiResults.Problem(result.Error)
+            : Results.Ok(result.Value);
     }
 
     private static async Task<IResult> CreateDefinition(

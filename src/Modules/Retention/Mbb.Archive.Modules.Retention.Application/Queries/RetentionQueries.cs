@@ -1,4 +1,5 @@
 using Mbb.Archive.BuildingBlocks.Application;
+using Mbb.Archive.BuildingBlocks.Application.Security;
 using Mbb.Archive.Modules.Retention.Application.Abstractions;
 
 namespace Mbb.Archive.Modules.Retention.Application.Queries;
@@ -20,10 +21,18 @@ public sealed class RetentionQueryHandlers :
     IQueryHandler<GetLegalHoldsQuery, IReadOnlyList<LegalHoldListItem>>
 {
     private readonly IRetentionQueries _queries;
+    private readonly IDocumentVisibility _visibility;
 
-    public RetentionQueryHandlers(IRetentionQueries queries)
+    public async Task<Result<RetentionCaseListItem>> GetCase(Guid id, CancellationToken ct)
     {
-        _queries = queries;
+        var item = await _queries.GetCaseAsync(id, ct);
+        return item is null || !(await _visibility.FilterAsync([item.DocumentId], ct)).Contains(item.DocumentId) ? Result<RetentionCaseListItem>.Failure(Error.NotFound("retention.case_not_found", "Saklama dosyası bulunamadı."))
+            : Result<RetentionCaseListItem>.Success(item);
+    }
+
+    public RetentionQueryHandlers(IRetentionQueries queries, IDocumentVisibility visibility)
+    {
+        _queries = queries; _visibility = visibility;
     }
 
     public async Task<Result<PagedResult<RetentionCaseListItem>>> Handle(
@@ -51,6 +60,9 @@ public sealed class RetentionQueryHandlers :
     public async Task<Result<IReadOnlyList<LegalHoldListItem>>> Handle(
         GetLegalHoldsQuery query,
         CancellationToken cancellationToken)
-        => Result<IReadOnlyList<LegalHoldListItem>>.Success(
-            await _queries.GetHoldsAsync(query.RetentionCaseId, cancellationToken));
+    {
+        var item = await GetCase(query.RetentionCaseId, cancellationToken);
+        if (item.IsFailure) return Result<IReadOnlyList<LegalHoldListItem>>.Failure(item.Error);
+        return Result<IReadOnlyList<LegalHoldListItem>>.Success(await _queries.GetHoldsAsync(query.RetentionCaseId, cancellationToken));
+    }
 }

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" /><PackageReference Include="MSTest.TestAdapter" /><PackageReference Include="MSTest.TestFramework" />
+    <ProjectReference Include="../../src/Modules/Organization/Mbb.Archive.Modules.Organization.Infrastructure/Mbb.Archive.Modules.Organization.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup><PackageReference Include="Microsoft.EntityFrameworkCore.Relational" /></ItemGroup>
+</Project>

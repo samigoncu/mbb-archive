@@ -7,6 +7,7 @@ using Mbb.Archive.Modules.Operations.Application.Commands;
 using Mbb.Archive.Modules.Operations.Application.Queries;
 using Mbb.Archive.Modules.Operations.Application.Alerts;
 using Mbb.Archive.Modules.Operations.Domain.Alerts;
+using Mbb.Archive.Modules.Operations.Domain.Notifications;
 
 namespace Mbb.Archive.Modules.Operations.Presentation;
 
@@ -53,9 +54,9 @@ public static class OperationsEndpoints
         group.MapPost("/alert-rules", async (CreateAlertRuleRequest request, AlertCommandHandlers handler, CancellationToken ct) =>
         {
             var result = await handler.Handle(new CreateAlertRuleCommand(request.Code, request.Metric, request.Comparison,
-                request.Threshold, request.Severity, request.EvaluationWindowMinutes), ct);
+                request.Threshold, request.Severity, request.EvaluationWindowMinutes, request.NotificationChannel, request.NotificationTarget), ct);
             return result.IsFailure ? ApiResults.Problem(result.Error) : Results.Created($"/api/v1/operations/alert-rules/{result.Value}", new { id = result.Value });
-        }).RequireAuthorization("permission:operations.alerts.manage");
+        }).RequireAuthorization("permission:operations.alerts.manage").WithAccessAudit("access.operations-alert-changed.v1", "alert");
 
         group.MapGet("/alerts", async (int? take, AlertQueryHandlers handler, CancellationToken ct)
             => Results.Ok(await handler.Active(take ?? 50, ct)))
@@ -66,13 +67,13 @@ public static class OperationsEndpoints
         {
             var result = await handler.Handle(new AcknowledgeAlertCommand(id, GetSubject(user), request.Note), ct);
             return result.IsFailure ? ApiResults.Problem(result.Error) : Results.NoContent();
-        }).RequireAuthorization("permission:operations.alerts.acknowledge");
+        }).RequireAuthorization("permission:operations.alerts.acknowledge").WithAccessAudit("access.operations-alert-acknowledged.v1", "alert", "id");
 
         group.MapPost("/alerts/{id:guid}/resolve", async (Guid id, AlertCommandHandlers handler, CancellationToken ct) =>
         {
             var result = await handler.Handle(new ResolveAlertCommand(id), ct);
             return result.IsFailure ? ApiResults.Problem(result.Error) : Results.NoContent();
-        }).RequireAuthorization("permission:operations.alerts.manage");
+        }).RequireAuthorization("permission:operations.alerts.manage").WithAccessAudit("access.operations-alert-changed.v1", "alert");
 
         group.MapGet(
             "/verifications",
@@ -145,7 +146,7 @@ public static class OperationsEndpoints
                             $"/api/v1/operations/recovery-drills/{result.Value}",
                             new { id = result.Value });
                 })
-            .RequireAuthorization("permission:operations.dr.manage");
+            .RequireAuthorization("permission:operations.dr.manage").WithAccessAudit("access.recovery-drill-changed.v1", "recovery-drill", "id");
 
         group.MapPost(
                 "/recovery-drills/{id:guid}/start",
@@ -162,7 +163,7 @@ public static class OperationsEndpoints
                         ? ApiResults.Problem(result.Error)
                         : Results.NoContent();
                 })
-            .RequireAuthorization("permission:operations.dr.manage");
+            .RequireAuthorization("permission:operations.dr.manage").WithAccessAudit("access.recovery-drill-changed.v1", "recovery-drill", "id");
 
         group.MapPost(
                 "/recovery-drills/{id:guid}/complete",
@@ -186,8 +187,9 @@ public static class OperationsEndpoints
                         ? ApiResults.Problem(result.Error)
                         : Results.NoContent();
                 })
-            .RequireAuthorization("permission:operations.dr.manage");
+            .RequireAuthorization("permission:operations.dr.manage").WithAccessAudit("access.recovery-drill-changed.v1", "recovery-drill", "id");
 
+        endpoints.MapOperationsAutomationEndpoints();
         return endpoints;
     }
 
@@ -209,6 +211,6 @@ public static class OperationsEndpoints
         string EvidenceReference,
         string Notes);
     private sealed record CreateAlertRuleRequest(string Code, string Metric, AlertComparison Comparison,
-        decimal Threshold, AlertSeverity Severity, int EvaluationWindowMinutes);
+        decimal Threshold, AlertSeverity Severity, int EvaluationWindowMinutes, NotificationChannel? NotificationChannel = null, string? NotificationTarget = null);
     private sealed record AcknowledgeAlertRequest(string Note);
 }

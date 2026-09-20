@@ -37,6 +37,8 @@ public sealed class DocumentTests
             new string('a', 64),
             "application/pdf",
             1024,
+            "dev-admin",
+            null,
             Now.AddMinutes(1));
 
         document.Archive(Now.AddMinutes(2));
@@ -57,6 +59,8 @@ public sealed class DocumentTests
             "test.pdf",
             "application/pdf",
             128,
+            "dev-admin",
+            null,
             Now.AddMinutes(1));
 
         Assert.AreEqual(before + 1, document.ConcurrencyVersion);
@@ -78,11 +82,7 @@ public sealed class DocumentTests
     {
         var document = Document.Create("Security test", Now);
 
-        var ingestion = document.BeginFileIngestion(
-            "test.pdf",
-            "application/pdf",
-            512,
-            Now);
+        var ingestion = document.BeginFileIngestion("test.pdf", "application/pdf", 512, "dev-admin", null, Now);
 
         ingestion.MarkStaged(
             "2026/09/02/file.bin",
@@ -105,11 +105,7 @@ public sealed class DocumentTests
     {
         var document = Document.Create("Security test", Now);
 
-        var ingestion = document.BeginFileIngestion(
-            "test.pdf",
-            "application/pdf",
-            512,
-            Now);
+        var ingestion = document.BeginFileIngestion("test.pdf", "application/pdf", 512, "dev-admin", null, Now);
 
         ingestion.MarkStaged(
             "2026/09/02/file.bin",
@@ -140,11 +136,7 @@ public sealed class DocumentTests
     {
         var document = Document.Create("Promotion test", Now);
 
-        var ingestion = document.BeginFileIngestion(
-            "test.pdf",
-            "application/pdf",
-            512,
-            Now);
+        var ingestion = document.BeginFileIngestion("test.pdf", "application/pdf", 512, "dev-admin", null, Now);
 
         ingestion.MarkStaged(
             "2026/09/02/file.bin",
@@ -163,11 +155,7 @@ public sealed class DocumentTests
     {
         var document = Document.Create("Promotion test", Now);
 
-        var ingestion = document.BeginFileIngestion(
-            "test.pdf",
-            "application/pdf",
-            512,
-            Now);
+        var ingestion = document.BeginFileIngestion("test.pdf", "application/pdf", 512, "dev-admin", null, Now);
 
         ingestion.MarkStaged(
             "2026/09/02/file.bin",
@@ -189,4 +177,70 @@ public sealed class DocumentTests
             ingestion.Status);
     }
 
+    /// <summary>
+    /// §5: her sürüm kimin oluşturduğunu ve düzeltme gerekçesini taşımalıdır.
+    /// </summary>
+    [TestMethod]
+    public void AddVersion_RecordsAuthorAndReason()
+    {
+        var document = Document.Create("Test Document", Now);
+
+        document.AddVersion(
+            "2026/09/02/v1.bin",
+            new string('a', 64),
+            "application/pdf",
+            1024,
+            "dev-admin",
+            null,
+            Now);
+
+        var second = document.AddVersion(
+            "2026/09/02/v2.bin",
+            new string('b', 64),
+            "application/pdf",
+            2048,
+            "kadir",
+            "Sayfa 3 eksik taranmıştı.",
+            Now.AddMinutes(5));
+
+        Assert.AreEqual(2, second.VersionNumber);
+        Assert.AreEqual("kadir", second.CreatedBy);
+        Assert.AreEqual("Sayfa 3 eksik taranmıştı.", second.Reason);
+
+        // Önceki sürüm yerinde kalır; düzeltme üzerine yazmaz.
+        Assert.AreEqual(2, document.Versions.Count);
+    }
+
+    [TestMethod]
+    public void AddVersion_RequiresAnAuthor()
+    {
+        var document = Document.Create("Test Document", Now);
+
+        Assert.ThrowsExactly<DomainRuleViolationException>(
+            () => document.AddVersion(
+                "2026/09/02/v1.bin",
+                new string('a', 64),
+                "application/pdf",
+                1024,
+                "   ",
+                null,
+                Now));
+    }
+
+    [TestMethod]
+    public void BeginFileIngestion_CarriesTheVersionReason()
+    {
+        var document = Document.Create("Test Document", Now);
+
+        var ingestion = document.BeginFileIngestion(
+            "duzeltme.pdf",
+            "application/pdf",
+            128,
+            "kadir",
+            "  Mühür eksikti.  ",
+            Now);
+
+        Assert.AreEqual("kadir", ingestion.SubmittedBy);
+        Assert.AreEqual("Mühür eksikti.", ingestion.VersionReason);
+    }
 }

@@ -35,9 +35,20 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                         .HasColumnType("character varying(200)")
                         .HasColumnName("barcode");
 
+                    b.Property<long>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(1L)
+                        .HasColumnName("concurrency_version");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<Guid?>("DigitalDossierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("digital_dossier_id");
 
                     b.Property<string>("FilePlanCode")
                         .IsRequired()
@@ -52,6 +63,10 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                     b.Property<Guid>("LocationId")
                         .HasColumnType("uuid")
                         .HasColumnName("location_id");
+
+                    b.Property<Guid?>("OwnerUnitId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_unit_id");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -70,7 +85,11 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                     b.HasIndex("Barcode")
                         .IsUnique();
 
+                    b.HasIndex("DigitalDossierId");
+
                     b.HasIndex("LocationId");
+
+                    b.HasIndex("OwnerUnitId", "FilePlanCode");
 
                     b.ToTable("folders", "physical_archive");
                 });
@@ -80,6 +99,28 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("DisposedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("disposed_at");
+
+                    b.Property<string>("DisposedBy")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("disposed_by");
+
+                    b.Property<Guid?>("DispositionEvidenceDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("disposition_evidence_document_id");
+
+                    b.Property<Guid?>("DispositionProcessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("disposition_process_id");
+
+                    b.Property<string>("DispositionReference")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("disposition_reference");
 
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uuid")
@@ -119,6 +160,12 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("checked_out_at");
 
+                    b.Property<string>("CheckedOutBy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("checked_out_by");
+
                     b.Property<DateTimeOffset>("DueAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("due_at");
@@ -132,6 +179,11 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("purpose");
+
+                    b.Property<string>("ReturnNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("return_note");
 
                     b.Property<DateTimeOffset?>("ReturnedAt")
                         .HasColumnType("timestamp with time zone")
@@ -192,10 +244,10 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                         .HasColumnType("uuid")
                         .HasColumnName("parent_id");
 
-                    b.Property<string>("Type")
+                    b.Property<string>("TypeCode")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
                         .HasColumnName("type");
 
                     b.HasKey("Id");
@@ -207,6 +259,54 @@ namespace Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Migrati
                         .IsUnique();
 
                     b.ToTable("locations", "physical_archive");
+                });
+
+            modelBuilder.Entity("Mbb.Archive.Modules.PhysicalArchive.Domain.Locations.ArchiveLocationTypeDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowsCapacity")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allows_capacity");
+
+                    b.Property<bool>("CanStoreFolder")
+                        .HasColumnType("boolean")
+                        .HasColumnName("can_store_folder");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("code");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsBuiltIn")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_built_in");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("location_types", "physical_archive");
                 });
 
             modelBuilder.Entity("Mbb.Archive.Modules.PhysicalArchive.Infrastructure.Persistence.Outbox.PhysicalArchiveOutboxMessage", b =>

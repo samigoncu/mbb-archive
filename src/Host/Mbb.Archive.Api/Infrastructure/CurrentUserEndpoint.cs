@@ -44,10 +44,11 @@ internal static class CurrentUserEndpoint
                         && !options.Value.Enabled
                         && roles.Contains("Administrators", StringComparer.OrdinalIgnoreCase);
 
+                    var assignedRoles = await access.GetAssignedRoleCodesAsync(subject, cancellationToken);
                     return Results.Ok(new
                     {
                         subject,
-                        roles,
+                        roles = roles.Concat(assignedRoles).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
                         permissions,
                         isAuthenticated = user.Identity?.IsAuthenticated ?? false,
                         authenticationMode = options.Value.Enabled ? "Jwt" : "Development",
@@ -58,6 +59,10 @@ internal static class CurrentUserEndpoint
             .WithName("GetCurrentUser")
             .RequireAuthorization();
 
+        endpoints.MapGet("/api/v1/access/archive-units", async (
+            Mbb.Archive.BuildingBlocks.Application.Security.IArchiveUnitDirectory directory,
+            CancellationToken ct) => Results.Ok(await directory.GetVisibleAsync(ct)))
+            .RequireAuthorization().WithTags("Access");
         return endpoints;
     }
 }

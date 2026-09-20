@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/BuildingBlocks/Mbb.Archive.BuildingBlocks.Application/Mbb.Archive.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../../src/BuildingBlocks/Mbb.Archive.BuildingBlocks.Presentation/Mbb.Archive.BuildingBlocks.Presentation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Host/Shared/LocalStoragePaths.cs" Link="Hosting/LocalStoragePaths.cs" />
+  </ItemGroup>
+</Project>

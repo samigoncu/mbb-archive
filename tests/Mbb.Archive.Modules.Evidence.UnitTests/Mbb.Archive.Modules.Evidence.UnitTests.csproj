@@ -12,5 +12,6 @@
     <ProjectReference Include="../../src/BuildingBlocks/Mbb.Archive.BuildingBlocks.Domain/Mbb.Archive.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Evidence/Mbb.Archive.Modules.Evidence.Domain/Mbb.Archive.Modules.Evidence.Domain.csproj" />
     <ProjectReference Include="../../src/Modules/Evidence/Mbb.Archive.Modules.Evidence.Application/Mbb.Archive.Modules.Evidence.Application.csproj" />
+    <ProjectReference Include="../../src/Modules/Evidence/Mbb.Archive.Modules.Evidence.Infrastructure/Mbb.Archive.Modules.Evidence.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

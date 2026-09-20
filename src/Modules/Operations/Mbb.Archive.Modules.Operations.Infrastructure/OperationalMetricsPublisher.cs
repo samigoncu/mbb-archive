@@ -88,24 +88,22 @@ internal sealed class OperationalMetricsPublisher :
             return _measurements.ToArray();
     }
 
-    private double ObserveNamed(string name)
+    private IEnumerable<Measurement<double>> ObserveNamed(string name)
     {
-        lock (_sync) return _named.GetValueOrDefault(name);
+        lock (_sync) return _named.TryGetValue(name, out var value) ? [new Measurement<double>(value)] : [];
     }
 
     private static IReadOnlyDictionary<string, double> BuildNamedMeasurements(OperationsOverview overview)
     {
-        double ComponentValue(string metric) => overview.Components.SelectMany(x => x.Measurements)
-            .Where(x => x.Name.Equals(metric, StringComparison.OrdinalIgnoreCase)).Sum(x => x.Value);
-        return new Dictionary<string, double>
-        {
-            ["alert_open_total"] = 0, ["alert_critical_total"] = 0, ["notification_failure_total"] = 0,
-            ["dlq_messages"] = overview.Queues.Where(x => x.IsDeadLetterQueue).Sum(x => x.Total),
-            ["processing_backlog"] = ComponentValue("processing_backlog"), ["search_backlog"] = ComponentValue("search_backlog"),
-            ["workflow_sla_overdue"] = ComponentValue("workflow_sla_overdue"), ["fixity_failure_total"] = ComponentValue("fixity_failures"),
-            ["audit_integrity_failure_total"] = ComponentValue("audit_integrity_failures"), ["storage_utilization"] = ComponentValue("storage_utilization"),
-            ["storage_growth_bytes_per_day"] = ComponentValue("storage_growth_bytes_per_day"), ["recovery_drill_failure_total"] = ComponentValue("recovery_drill_failures")
-        };
+        var result = overview.Components.SelectMany(x => x.Measurements).GroupBy(x => x.Name)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
+        if (overview.Dependencies.Any(x => x.Name.Contains("Rabbit", StringComparison.OrdinalIgnoreCase) &&
+            x.Health is Mbb.Archive.BuildingBlocks.Observability.OperationalHealth.Healthy or Mbb.Archive.BuildingBlocks.Observability.OperationalHealth.Degraded))
+            result["dlq_messages"] = overview.Queues.Where(x => x.IsDeadLetterQueue).Sum(x => x.Total);
+        void Alias(string name, string source) { if (result.TryGetValue(source, out var value)) result[name] = value; }
+        Alias("processing_backlog", "jobs_active"); Alias("search_backlog", "index_pending");
+        Alias("workflow_sla_overdue", "tasks_overdue"); Alias("recovery_drill_failure_total", "recovery_drill_failures");
+        return result;
     }
 
     private static readonly string[] MetricNames = ["alert_open_total", "alert_critical_total", "notification_failure_total",

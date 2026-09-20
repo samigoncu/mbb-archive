@@ -2,6 +2,8 @@ export type FolderStatus = "Available" | "OnLoan" | "Transferred" | "Disposed";
 
 export type FolderListItem = {
   id: string;
+  ownerUnitId?: string | null;
+  digitalDossierId?: string | null;
   barcode: string;
   title: string;
   filePlanCode: string;
@@ -21,6 +23,8 @@ export type FolderFilters = {
   locationId?: string;
   status?: string;
   year?: string;
+  ownerUnitId?: string;
+  digitalDossierId?: string;
 };
 
 export const folderStatusLabels: Record<FolderStatus, string> = {

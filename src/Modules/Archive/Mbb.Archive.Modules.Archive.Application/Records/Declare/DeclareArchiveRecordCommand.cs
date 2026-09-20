@@ -1,1 +1,1 @@
-using Mbb.Archive.BuildingBlocks.Application;namespace Mbb.Archive.Modules.Archive.Application.Records.Declare;public sealed record DeclareArchiveRecordCommand(Guid RecordId,string ClassificationCode,string RetentionRuleCode):ICommand;
+using Mbb.Archive.BuildingBlocks.Application;namespace Mbb.Archive.Modules.Archive.Application.Records.Declare;public sealed record DeclareArchiveRecordCommand(Guid RecordId,string ClassificationCode,string RetentionRuleCode,string? DeclaredBy=null):ICommand;

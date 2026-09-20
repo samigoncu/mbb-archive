@@ -1,0 +1,910 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/arama",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/arsiv-simulatoru",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/arsiv-yerlesimi",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/ayarlar",
+    "status": 200,
+    "errors": [
+      "yapılandırılma"
+    ]
+  },
+  {
+    "path": "/denetim",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/islemler",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/yeni",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/dosya-islemleri",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/gorevlerim",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/harita",
+    "status": 200,
+    "errors": [
+      "yapılandırılma",
+      "tanımlı değil"
+    ]
+  },
+  {
+    "path": "/islem-takibi",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/kanit",
+    "status": 200,
+    "errors": [
+      "yapılandırılma",
+      "tanımlı değil"
+    ]
+  },
+  {
+    "path": "/kayit-beyani",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/kesfet",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/koleksiyonlar",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/login",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/odunc",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/operations",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/profil",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/raporlar",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/tanimlamalar",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/tanimlamalar/birimler",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/tanimlamalar/gorunurluk",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/tanimlamalar/paylasimlar",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/tanimlamalar/ustveri",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/tanimlamalar/yetkiler",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/tarama",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/arama?mode=advanced",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07662-fa3b-7be5-8cde-960ee3f10a44",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07664-a322-71cd-af3c-bd20139e8912",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07814-cf96-737c-8436-9e279c294d0c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07814-d062-751f-ac7b-3f1715a1793c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07814-d07a-72bc-a77a-2d4eff0ab55c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07d22-9d4d-7bd9-b079-fe007ac678e5",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07eeb-c31f-7b36-a0bb-fb81874d50bc",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07ef8-2f8f-71e6-883a-5a74a7e24cf0",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07ef8-2fc7-7669-b3a5-81226b38bf16",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07ef8-ac3d-7602-a37c-bf324273ede0",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a07ef8-acc5-760a-ace6-c28e7ba67b9c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a0868d-8155-7b20-ac0e-449f93314d47",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a086aa-e667-7ebe-beac-bfef5d289c6d",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a086b3-09eb-7ad2-a66d-c9ed45890665",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a089bf-fccb-7e78-a5ae-db4f40efeece",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a089d5-e80f-7d31-8d29-dd4e727249fe",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?documentId=01a08a11-fa52-7d58-a976-fd0bfdfc70bf",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.collection-changed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.collection-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.collection-deleted.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.collection-document-added.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.collection-document-removed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.collection-viewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-cancellation-restored.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-cancelled.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-downloaded.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-filing-changed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-pdf-downloaded.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-pdf-previewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-previewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-reprocess-requested.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-text-viewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-version-cancelled.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.document-viewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.dossier-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.dossier-renamed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.dossier-viewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.dossier-zip-imported.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.file-plan-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.file-plan-item-added.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.file-plan-retired.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.folder-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.folder-moved.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.folder-viewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.grant-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.grant-revoked.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.organization-unit-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.organization-unit-deleted.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.permission-changed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.request-denied.v1&actor=access-test-57d71ad2f8",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.request-denied.v1&actor=access-test-aba3b9237e",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.request-denied.v1&actor=zeynep",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.resource-viewed.v1&actor=access-test-57d71ad2f8",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.resource-viewed.v1&actor=access-test-aba3b9237e",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.resource-viewed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.resource-viewed.v1&actor=zeynep",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.role-assigned.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.search-performed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.unit-file-plans-changed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.workflow-task-assigned.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.workflow-task-completed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=access.workflow-task-created.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=archive.record-declared.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=classification.document-classified.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.cancellation-restored.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.cancelled.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.created.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.dossier-filed.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.file-promotion-requested.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.file-security-approved.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.file-staged.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.filing-changed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.original-stored.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.upload-policy-changed.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=documents.version-cancelled.v1&actor=dev-admin",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=physical-archive.folder-owner-assigned.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=physical-archive.folder-registered.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.ocr-completed.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.ocr-requested.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.pdf-inspection-completed.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.pdf-inspection-failed.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.pdf-inspection-requested.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.ready-for-index.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.started.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.text-extraction-completed.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=processing.text-extraction-requested.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=search.document-indexed.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?from=2026-09-01&to=2026-09-11&eventName=workflow.task-assigned.v1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/denetim?take=100&before=15070",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/dosyalar/01a08a15-8c40-75ad-bd07-5ad26ad88ca3",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/islemler?status=Approved",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/islemler?status=Completed",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/islemler?status=Draft",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/islemler?status=PendingApproval",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/islemler?status=Rejected",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha/islemler?status=UnderReview",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha?status=Eligible",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha?status=Held",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/devir-imha?status=Scheduled",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07662-fa3b-7be5-8cde-960ee3f10a44",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07664-a322-71cd-af3c-bd20139e8912",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07814-cf96-737c-8436-9e279c294d0c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07814-d062-751f-ac7b-3f1715a1793c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07814-d07a-72bc-a77a-2d4eff0ab55c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07d22-9d4d-7bd9-b079-fe007ac678e5",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07eeb-c31f-7b36-a0bb-fb81874d50bc",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07ef8-2f8f-71e6-883a-5a74a7e24cf0",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07ef8-2fc7-7669-b3a5-81226b38bf16",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07ef8-ac3d-7602-a37c-bf324273ede0",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a07ef8-acc5-760a-ace6-c28e7ba67b9c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a0868d-8155-7b20-ac0e-449f93314d47",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a086aa-e667-7ebe-beac-bfef5d289c6d",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a086b3-09eb-7ad2-a66d-c9ed45890665",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a089bf-fccb-7e78-a5ae-db4f40efeece",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a089d5-e80f-7d31-8d29-dd4e727249fe",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents/01a08a11-fa52-7d58-a976-fd0bfdfc70bf",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c050-7fa1-a567-562ced17e608",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c06b-7867-96a1-96db0d3b98b1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c074-74b4-a465-9fb07613ddc8",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c07b-77e1-ae4a-77b5d13dc7d6",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c080-7e42-a880-9cb209187709",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c085-7a19-8745-b1990cd948f9",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c08a-719b-8404-eb9d6a41dde7",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c098-7519-ad26-f96d56e2c5d1",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c09c-761b-96e9-6d65958a7248",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c09c-761b-96e9-6d65958a7248&view=cards&dossierSort=titleAsc",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c09c-761b-96e9-6d65958a7248&view=cards&dossierSort=titleAsc&status=Cancelled",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c09c-761b-96e9-6d65958a7248&view=list&dossierSort=titleAsc",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0a4-7648-af54-4f80bdab503c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0a9-7e86-9e5d-9d07449dfe62",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0ae-7de4-809f-3ed1844f9a26",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0b2-7d7f-8d93-d3767badc77f",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0b6-73b6-9200-5681a82de019",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0bb-7ed4-ba95-aed27d754bb9",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0c2-7a26-86ea-d7231e5fb1bd",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0c6-741d-9b5e-389f9d28cd54",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0cb-721f-95c8-53f1eeee207c",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0cf-7ce7-9d09-8d0c647ea1cb",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0d3-7ffa-a14b-c40a2d48a181",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0d7-768d-996a-25b53f04ab2d",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0db-7dfc-b736-437e357233b4",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0e0-727d-b8a2-dce4fee39a41",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0e4-787f-9548-73a216f9407b",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/documents?ownerUnitId=01a072e9-c0e8-78ca-afcf-077378f31550",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/dosya-islemleri/01a07829-150f-7bfb-ac84-d806d2e91ce4",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/dosya-islemleri/01a07829-1547-72c7-9f79-cca110095382",
+    "status": 200,
+    "errors": []
+  },
+  {
+    "path": "/dosya-islemleri?",
+    "status": 200,
+    "errors": []
+  }
+]

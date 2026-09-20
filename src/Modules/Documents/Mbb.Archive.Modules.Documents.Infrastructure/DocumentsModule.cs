@@ -8,6 +8,8 @@ using Mbb.Archive.Modules.Documents.Application.Documents.Create;
 using Mbb.Archive.Modules.Documents.Application.Documents.GetById;
 using Mbb.Archive.Modules.Documents.Application.Documents.GetContent;
 using Mbb.Archive.Modules.Documents.Application.Documents.GetIngestion;
+using Mbb.Archive.Modules.Documents.Application.Documents.GetIntegrity;
+using Mbb.Archive.Modules.Documents.Application.Documents.GetVersions;
 using Mbb.Archive.Modules.Documents.Application.Documents.List;
 using Mbb.Archive.Modules.Documents.Application.Documents.ProcessSecurityResult;
 using Mbb.Archive.Modules.Documents.Application.Documents.PromoteFile;
@@ -62,6 +64,10 @@ public static class DocumentsModule
             .ValidateOnStart();
 
         services
+            .AddOptions<ClassificationConsumerOptions>()
+            .Bind(configuration.GetSection(ClassificationConsumerOptions.SectionName));
+
+        services
             .AddOptions<SecurityResultConsumerOptions>()
             .Bind(configuration.GetSection(SecurityResultConsumerOptions.SectionName))
             .Validate(
@@ -91,10 +97,28 @@ public static class DocumentsModule
 
         services.AddSingleton(TimeProvider.System);
 
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Dossiers.IDossierRepository, EfDossiers>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Dossiers.IDossierQueries, EfDossiers>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Contracts.IArchiveFilingCatalog, EfDossiers>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Dossiers.DossierHandlers>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Dossiers.DocumentFilingHandler>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Dossiers.IDocumentFilingTransaction, DocumentFilingTransaction>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Settings.IUploadPolicyStore, UploadPolicyStore>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Settings.UploadPolicyHandler>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Settings.IStorageStatusQuery,
+            Storage.StorageStatusQuery>();
         services.AddScoped<IDocumentRepository, EfDocumentRepository>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Relations.IDocumentRelations, DocumentRelations>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Relations.DocumentRelationsHandler>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Contracts.ICurrentDocumentVersion, CurrentDocumentVersionSource>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Documents.CancelVersion.CancelDocumentVersionHandler>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Contracts.IDocumentSearchDatesProvider, DocumentSearchDatesProvider>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Contracts.IDocumentSearchExclusions, DocumentSearchExclusions>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Application.Documents.Cancel.DocumentCancellationHandler>();
         services.AddScoped<IDocumentIngestionRepository, EfDocumentIngestionRepository>();
         services.AddScoped<IDocumentQueries, EfDocumentQueries>();
         services.AddScoped<IFileStagingService, LocalFileStagingService>();
+        services.AddScoped<Mbb.Archive.Modules.Documents.Contracts.IOriginalProtectionSynchronizer, OriginalProtectionSynchronizer>();
 
         var originalStorageProvider =
             configuration[$"{OriginalStorageOptions.SectionName}:Provider"]
@@ -123,6 +147,8 @@ public static class DocumentsModule
         services.AddScoped<GetDocumentContentQueryHandler>();
         services.AddScoped<GetDocumentIngestionQueryHandler>();
         services.AddScoped<GetDocumentsQueryHandler>();
+        services.AddScoped<GetDocumentIntegrityQueryHandler>();
+        services.AddScoped<GetDocumentVersionsQueryHandler>();
         services.AddScoped<StageDocumentFileCommandHandler>();
         services.AddScoped<GetOutboxStatusQueryHandler>();
         services.AddScoped<ApproveDocumentFileSecurityCommandHandler>();
@@ -130,7 +156,10 @@ public static class DocumentsModule
         services.AddScoped<PromoteDocumentFileCommandHandler>();
 
         services.AddHostedService<OutboxPublisherBackgroundService>();
+        services.AddScoped<Mbb.Archive.BuildingBlocks.Application.Security.IDocumentVisibility, DocumentVisibility>();
+
         services.AddHostedService<SecurityResultConsumerBackgroundService>();
+        services.AddHostedService<ClassificationConsumerBackgroundService>();
         services.AddHostedService<PromotionConsumerBackgroundService>();
 
         services.AddScoped<
@@ -141,6 +170,8 @@ public static class DocumentsModule
             Mbb.Archive.BuildingBlocks.Observability.IIntegrityVerificationContributor,
             Mbb.Archive.Modules.Documents.Infrastructure.Operations.DocumentsOriginalFixityVerifier>();
 
+        services.AddScoped<Mbb.Archive.BuildingBlocks.Application.Security.IOrganizationUnitUsage, DocumentUnitUsage>();
+        services.AddScoped<Mbb.Archive.BuildingBlocks.Application.Security.IFilePlanCodeUsage, DocumentFilePlanUsage>();
         return services;
     }
 }

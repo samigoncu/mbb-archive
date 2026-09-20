@@ -38,9 +38,15 @@ public static class EvidenceModule
         services.AddSingleton<CertificateTrustEvaluator>();
         services.AddSingleton<ICmsSignatureValidator, DotNetCmsSignatureValidator>();
         services.AddSingleton<IRfc3161TimestampValidator, DotNetRfc3161TimestampValidator>();
-        services.AddSingleton<IPdfSignatureValidator, UnavailablePdfSignatureValidator>();
+        services.Configure<DssValidationOptions>(configuration.GetSection("Evidence:PdfValidation:Dss"));
+        services.AddHttpClient<IPdfSignatureValidator, DssPdfSignatureValidator>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 
-        services.AddScoped<IEvidenceRepository, EfEvidenceRepository>();
+        services.AddScoped<EfEvidenceRepository>();
+        services.AddScoped<IEvidenceRepository>(
+            sp => sp.GetRequiredService<EfEvidenceRepository>());
+        services.AddScoped<IEvidenceQueries>(
+            sp => sp.GetRequiredService<EfEvidenceRepository>());
         services.AddScoped<IUnitOfWork<EvidenceBoundary>>(
             sp => sp.GetRequiredService<EvidenceDbContext>());
         services.AddScoped<IOutbox<EvidenceBoundary>>(
@@ -48,6 +54,7 @@ public static class EvidenceModule
 
         services.AddScoped<EvidenceCommandHandlers>();
         services.AddScoped<GetEvidenceValidationQueryHandler>();
+        services.AddScoped<GetEvidenceValidationsQueryHandler>();
         services.AddHostedService<EvidenceOutboxPublisher>();
 
         services.AddScoped<

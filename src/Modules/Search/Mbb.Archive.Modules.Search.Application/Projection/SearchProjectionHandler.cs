@@ -9,7 +9,8 @@ public sealed class SearchProjectionHandler :
     ICommandHandler<ApplyDocumentCreatedCommand>,
     ICommandHandler<ApplyProcessingReadyCommand>,
     ICommandHandler<ApplyClassificationCommand>,
-    ICommandHandler<ApplyMetadataCommand>
+    ICommandHandler<ApplyMetadataCommand>,
+    ICommandHandler<ApplyGeoRelationsCommand>
 {
     private readonly ISearchDocumentRepository _documents;
     private readonly IInbox<SearchBoundary> _inbox;
@@ -47,6 +48,8 @@ public sealed class SearchProjectionHandler :
             document.EnsureTitle(command.Title, command.OccurredAt);
         }
 
+        document.SetOwnerUnitPath(command.OwnerUnitPath, command.OccurredAt);
+
         return await PersistAsync(
             command.MessageId,
             command.EventName,
@@ -68,7 +71,7 @@ public sealed class SearchProjectionHandler :
 
         document.ApplyProcessing(
             command.DocumentVersionId,
-            mimeType: null,
+            command.MimeType,
             command.TextArtifactStorageKey,
             command.OcrJsonArtifactStorageKey,
             command.OccurredAt);
@@ -125,6 +128,27 @@ public sealed class SearchProjectionHandler :
             command.SchemaVersion,
             command.ValuesJson,
             command.OccurredAt);
+
+        return await PersistAsync(
+            command.MessageId,
+            command.EventName,
+            command.OccurredAt,
+            document,
+            cancellationToken);
+    }
+
+    public async Task<Result> Handle(
+        ApplyGeoRelationsCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (await IsProcessedAsync(command.MessageId, cancellationToken))
+            return Result.Success();
+
+        var document = await RequireProjectionAsync(command.DocumentId, cancellationToken);
+        if (document is null)
+            return MissingDocument();
+
+        document.ReplaceGeoRelations(command.Relations, command.OccurredAt);
 
         return await PersistAsync(
             command.MessageId,

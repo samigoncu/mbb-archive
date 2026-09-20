@@ -33,9 +33,12 @@ public sealed class AuditDbContext : DbContext
                 .HasColumnName("event_name")
                 .HasMaxLength(200);
 
+            // jsonb anahtarları yeniden sıralar ve boşlukları normalize eder;
+            // geri okunan metin yayınlanan baytlardan farklı olur ve girdi
+            // hash'i doğrulanamaz. Denetim günlüğü baytı olduğu gibi saklar.
             entity.Property(x => x.Payload)
                 .HasColumnName("payload")
-                .HasColumnType("jsonb");
+                .HasColumnType("text");
 
             entity.Property(x => x.DocumentId)
                 .HasColumnName("document_id");

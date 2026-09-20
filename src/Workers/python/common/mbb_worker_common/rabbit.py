@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+from datetime import datetime, timezone
 import aio_pika
 from aio_pika import DeliveryMode, ExchangeType, Message
 from .config import RabbitConfig
@@ -18,7 +19,20 @@ class RabbitBus:
         queue=await self.channel.declare_queue(queue_name,durable=True,arguments={"x-dead-letter-exchange":self.config.dlx,"x-dead-letter-routing-key":dlq}); await queue.bind(self.exchange,routing_key); return queue
     async def publish(self,event_name:str,payload:dict):
         body=json.dumps(payload,separators=(",",":"),ensure_ascii=False).encode("utf-8")
-        msg=Message(body,content_type="application/json",delivery_mode=DeliveryMode.PERSISTENT,message_id=payload["eventId"],type=event_name,timestamp=None)
+        # AMQP timestamp denetim kaydının occurredAt kaynagidir. None birakilirsa
+        # broker 0 gonderir ve audit journal olayi 1970-01-01 olarak yazar.
+        msg=Message(body,content_type="application/json",delivery_mode=DeliveryMode.PERSISTENT,message_id=payload["eventId"],type=event_name,timestamp=_event_timestamp(payload))
         await self.exchange.publish(msg,routing_key=event_name,mandatory=True)
     async def close(self):
         if self.connection: await self.connection.close()
+
+
+def _event_timestamp(payload:dict)->datetime:
+    """Olayin occurredAt alanini kullanir; yoksa yayin anina duser."""
+    raw=payload.get("occurredAt")
+    if isinstance(raw,str) and raw:
+        try:
+            return datetime.fromisoformat(raw.replace("Z","+00:00"))
+        except ValueError:
+            pass
+    return datetime.now(timezone.utc)

@@ -117,12 +117,15 @@ public sealed class PromoteDocumentFileCommandHandler
         {
             var now = _timeProvider.GetUtcNow();
 
-            var version = document.AddVersion(
+            var version = document.CompletePendingFileIngestion(
                 stored.StorageKey,
                 stored.Sha256Hash,
                 ingestion.DetectedMimeType,
                 stored.SizeBytes,
+                ingestion.SubmittedBy,
+                ingestion.VersionReason,
                 now);
+            version.PinStorageVersion(stored.StorageVersionId);
 
             ingestion.MarkAccepted(
                 stored.StorageKey,
@@ -139,7 +142,8 @@ public sealed class PromoteDocumentFileCommandHandler
                     stored.Sha256Hash,
                     stored.SizeBytes,
                     ingestion.DetectedMimeType,
-                    now));
+                    now,
+                    document.OwnerUnitPath));
 
             _inbox.MarkProcessed(
                 command.MessageId,

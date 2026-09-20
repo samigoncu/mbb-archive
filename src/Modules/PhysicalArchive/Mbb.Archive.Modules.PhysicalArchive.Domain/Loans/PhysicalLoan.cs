@@ -19,7 +19,8 @@ public sealed class PhysicalLoan : AggregateRoot<Guid>
         string borrowerSubjectId,
         string purpose,
         DateTimeOffset checkedOutAt,
-        DateTimeOffset dueAt) : base(id)
+        DateTimeOffset dueAt,
+        string? checkedOutBy = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(borrowerSubjectId))
             throw new DomainRuleViolationException("Borrower subject id is required.");
@@ -30,18 +31,21 @@ public sealed class PhysicalLoan : AggregateRoot<Guid>
 
         FolderId = folderId;
         BorrowerSubjectId = borrowerSubjectId.Trim();
+        CheckedOutBy = string.IsNullOrWhiteSpace(checkedOutBy) ? "Arşiv Görevlisi" : checkedOutBy.Trim();
         Purpose = purpose.Trim();
-        CheckedOutAt = checkedOutAt;
-        DueAt = dueAt;
+        CheckedOutAt = checkedOutAt.ToUniversalTime();
+        DueAt = dueAt.ToUniversalTime();
         Status = PhysicalLoanStatus.Active;
     }
 
     public Guid FolderId { get; private set; }
     public string BorrowerSubjectId { get; private set; } = string.Empty;
+    public string CheckedOutBy { get; private set; } = string.Empty;
     public string Purpose { get; private set; } = string.Empty;
     public DateTimeOffset CheckedOutAt { get; private set; }
     public DateTimeOffset DueAt { get; private set; }
     public DateTimeOffset? ReturnedAt { get; private set; }
+    public string? ReturnNote { get; private set; }
     public PhysicalLoanStatus Status { get; private set; }
 
     public static PhysicalLoan Start(
@@ -49,21 +53,24 @@ public sealed class PhysicalLoan : AggregateRoot<Guid>
         string borrowerSubjectId,
         string purpose,
         DateTimeOffset now,
-        DateTimeOffset dueAt)
+        DateTimeOffset dueAt,
+        string? checkedOutBy = null)
         => new(
             Guid.CreateVersion7(),
             folderId,
             borrowerSubjectId,
             purpose,
             now,
-            dueAt);
+            dueAt,
+            checkedOutBy);
 
-    public void Return(DateTimeOffset now)
+    public void Return(DateTimeOffset now, string? returnNote = null)
     {
         if (Status == PhysicalLoanStatus.Returned)
             return;
 
-        ReturnedAt = now;
+        ReturnedAt = now.ToUniversalTime();
+        ReturnNote = returnNote?.Trim();
         Status = PhysicalLoanStatus.Returned;
     }
 

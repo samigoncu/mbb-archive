@@ -38,9 +38,19 @@ internal sealed class PhysicalArchiveOperationalSnapshotContributor :
         var outboxPending = await _db.OutboxMessages.AsNoTracking().LongCountAsync(
             cancellationToken);
 
-        var health = overdue > 50
+        // Gecikmiş ödünç teknik bir arıza değil, olağan bir iş durumudur:
+        // personel dosyayı zamanında iade etmemiştir, sistem sorunsuz çalışır.
+        // Tek bir gecikme modülü "bozuk" göstermek, panoyu sürekli sarı
+        // tutar ve gerçek arıza fark edilmez hâle gelirdi.
+        //
+        // Sağlığı yalnız teknik sinyal belirler: giden kutusu birikiyorsa
+        // mesajlar işlenmiyor demektir. Gecikme ancak yığılma boyutuna
+        // ulaştığında — takibin tamamen durduğunu gösterir — uyarıya döner.
+        const int overdueAlertThreshold = 50;
+
+        var health = outboxPending > 500
             ? OperationalHealth.Unhealthy
-            : overdue > 0 || outboxPending > 100
+            : outboxPending > 100
                 ? OperationalHealth.Degraded
                 : OperationalHealth.Healthy;
 
@@ -50,11 +60,14 @@ internal sealed class PhysicalArchiveOperationalSnapshotContributor :
             now,
             [
                 new("folders", folders),
-                new("loans_overdue", overdue),
+                // Ölçüm olarak kalır: operasyon ekranı sayıyı gösterir,
+                // ama sağlık durumunu belirlemez.
+                new("loans_overdue", overdue, Description: "İade tarihi geçmiş ödünç kaydı"),
                 new("outbox_pending", outboxPending)
             ],
-            overdue > 0
-                ? [new(OperationalHealth.Degraded, "physical_archive.loan_overdue", $"{overdue} loans are overdue.")]
+            overdue >= overdueAlertThreshold
+                ? [new(OperationalHealth.Degraded, "physical_archive.loan_overdue",
+                    $"İade tarihi geçmiş {overdue} ödünç kaydı var; ödünç takibi durmuş olabilir.")]
                 : []);
     }
 }

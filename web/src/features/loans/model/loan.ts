@@ -16,7 +16,8 @@ export type LoanDetailsItem = {
   folderBarcode: string;
   folderTitle: string;
   filePlanCode: string;
-  borrowerSubjectId: string; // İlk zimmetlenen personel
+  borrowerSubjectId: string; // İlk zimmetlenen personel (Teslim Alan)
+  checkedOutBy?: string | null; // Teslim eden personel / yetkili
   currentHolder?: string; // Güncel dosya hamili (devir edildiyse)
   currentLocation?: string; // Dosyanın güncel fiziki konumu (oda/birim)
   custodyChain?: CustodyTransferRecord[]; // Zincirleme devir geçmişi (sınırsız)
@@ -25,6 +26,7 @@ export type LoanDetailsItem = {
   checkedOutAt: string;
   dueAt: string;
   returnedAt: string | null;
+  returnNote?: string | null;
   isOverdue: boolean;
   daysOverdue: number;
 };

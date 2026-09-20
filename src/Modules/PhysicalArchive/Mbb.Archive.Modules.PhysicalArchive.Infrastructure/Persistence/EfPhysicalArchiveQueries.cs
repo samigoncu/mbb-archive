@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Mbb.Archive.BuildingBlocks.Application.Security;
 using Mbb.Archive.BuildingBlocks.Application;
 using Mbb.Archive.Modules.PhysicalArchive.Application.Abstractions;
 using Mbb.Archive.Modules.PhysicalArchive.Domain.Folders;
@@ -11,7 +12,17 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
 {
     private readonly PhysicalArchiveDbContext _db;
 
-    public EfPhysicalArchiveQueries(PhysicalArchiveDbContext db) => _db = db;
+    private readonly IArchiveUnitDirectory _units;
+    private readonly ICurrentUserScope _scopes;
+    public EfPhysicalArchiveQueries(PhysicalArchiveDbContext db, IArchiveUnitDirectory units, ICurrentUserScope scopes)
+    { _db = db; _units = units; _scopes = scopes; }
+
+    private async Task<IQueryable<PhysicalFolder>> VisibleFolders(CancellationToken ct)
+    {
+        var ids = (await _units.GetVisibleAsync(ct)).Select(u => u.Id).ToArray();
+        var scope = await _scopes.GetAsync(ct);
+        return _db.Folders.AsNoTracking().Where(f => scope.Unrestricted || (f.OwnerUnitId != null && ids.Contains(f.OwnerUnitId.Value)));
+    }
 
     public async Task<IReadOnlyList<LocationListItem>> GetLocationsAsync(
         string? type,
@@ -19,8 +30,11 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
     {
         var query = _db.Locations.AsNoTracking();
 
-        if (Enum.TryParse<ArchiveLocationType>(type, ignoreCase: true, out var locationType))
-            query = query.Where(x => x.Type == locationType);
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            var typeCode = type.Trim();
+            query = query.Where(x => x.TypeCode == typeCode);
+        }
 
         var rows = await query
             .OrderBy(x => x.Code)
@@ -28,7 +42,7 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
             {
                 x.Id,
                 x.ParentId,
-                x.Type,
+                x.TypeCode,
                 x.Code,
                 x.Name,
                 x.Barcode,
@@ -36,14 +50,20 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
             })
             .ToListAsync(ct);
 
+        // Seviye adı ve klasör taşıma kuralı katalogdan gelir; arayüzde sabit
+        // bir tür listesi tutulmasın diye burada birleştirilir.
+        var types = await _db.LocationTypes.AsNoTracking().ToDictionaryAsync(x => x.Code, ct);
+
         return rows.Select(x => new LocationListItem(
             x.Id,
             x.ParentId,
-            x.Type.ToString(),
+            x.TypeCode,
             x.Code,
             x.Name,
             x.Barcode,
-            x.IsActive)).ToList();
+            x.IsActive,
+            types.TryGetValue(x.TypeCode, out var type) ? type.Name : x.TypeCode,
+            type is not null && type.CanStoreFolder)).ToList();
     }
 
     public async Task<PagedResult<FolderListItem>> GetFoldersPageAsync(
@@ -51,7 +71,15 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
         FolderFilter filter,
         CancellationToken ct)
     {
-        var query = _db.Folders.AsNoTracking();
+        var query = await VisibleFolders(ct);
+        if (filter.OwnerUnitId is { } owner)
+        {
+            var units = await _units.GetVisibleAsync(ct);
+            var parent = units.FirstOrDefault(u => u.Id == owner);
+            var ids = units.Where(u => parent is not null && u.Path.StartsWith(parent.Path, StringComparison.Ordinal)).Select(u => u.Id).ToArray();
+            query = query.Where(f => f.OwnerUnitId != null && ids.Contains(f.OwnerUnitId.Value));
+        }
+        if (filter.DigitalDossierId is { } dossier) query = query.Where(f => f.DigitalDossierId == dossier);
 
         if (!string.IsNullOrWhiteSpace(filter.Barcode))
         {
@@ -65,14 +93,23 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
         if (!string.IsNullOrWhiteSpace(filter.FilePlanCode))
         {
             var filePlanCode = filter.FilePlanCode.Trim();
-            query = query.Where(x => x.FilePlanCode.StartsWith(filePlanCode));
+            query = query.Where(x => (x.FilePlanCode == filePlanCode || x.FilePlanCode.StartsWith(filePlanCode + ".")));
         }
 
         if (filter.LocationId is { } locationId)
             query = query.Where(x => x.LocationId == locationId);
 
         if (Enum.TryParse<PhysicalFolderStatus>(filter.Status, ignoreCase: true, out var status))
+        {
             query = query.Where(x => x.Status == status);
+            if (status == PhysicalFolderStatus.Available)
+            {
+                var activeLoanFolderIds = _db.Loans
+                    .Where(l => l.Status != PhysicalLoanStatus.Returned)
+                    .Select(l => l.FolderId);
+                query = query.Where(x => !activeLoanFolderIds.Contains(x.Id));
+            }
+        }
 
         if (filter.Year is { } year)
             query = query.Where(x => x.CreatedAt.Year == year);
@@ -104,6 +141,8 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
                     folder.Status,
                     DocumentCount = folder.Documents.Count,
                     folder.CreatedAt,
+                    folder.OwnerUnitId,
+                    folder.DigitalDossierId,
                     folder.LastMovedAt
                 })
             .ToListAsync(ct);
@@ -119,14 +158,14 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
             x.Status.ToString(),
             x.DocumentCount,
             x.CreatedAt,
-            x.LastMovedAt)).ToList();
+            x.LastMovedAt, x.OwnerUnitId, x.DigitalDossierId)).ToList();
 
         return new PagedResult<FolderListItem>(items, page.Page, page.PageSize, totalCount);
     }
 
     public async Task<FolderDetails?> GetFolderAsync(Guid id, CancellationToken ct)
     {
-        var row = await _db.Folders.AsNoTracking()
+        var row = await (await VisibleFolders(ct))
             .Where(x => x.Id == id)
             .Select(x => new
             {
@@ -136,7 +175,12 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
                 x.FilePlanCode,
                 x.LocationId,
                 x.Status,
-                Documents = x.Documents.Select(d => d.DocumentId).ToList()
+                x.OwnerUnitId,
+                x.DigitalDossierId,
+                Documents = x.Documents.Select(d => d.DocumentId).ToList(),
+                Dispositions = x.Documents.Where(d => d.DispositionProcessId != null).Select(d =>
+                    new PhysicalDispositionDetails(d.DocumentId, d.DispositionProcessId!.Value, d.DisposedAt!.Value,
+                        d.DisposedBy!, d.DispositionReference!, d.DispositionEvidenceDocumentId!.Value)).ToList()
             })
             .SingleOrDefaultAsync(ct);
 
@@ -147,14 +191,14 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
             row.FilePlanCode,
             row.LocationId,
             row.Status.ToString(),
-            row.Documents);
+            row.Documents, row.OwnerUnitId, row.DigitalDossierId, row.Dispositions);
     }
 
     public async Task<FolderDetails?> GetFolderByBarcodeAsync(string barcode, CancellationToken ct)
     {
         var normalized = barcode.Trim().ToUpperInvariant();
 
-        var row = await _db.Folders.AsNoTracking()
+        var row = await (await VisibleFolders(ct))
             .Where(x => x.Barcode == normalized)
             .Select(x => new
             {
@@ -164,7 +208,12 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
                 x.FilePlanCode,
                 x.LocationId,
                 x.Status,
-                Documents = x.Documents.Select(d => d.DocumentId).ToList()
+                x.OwnerUnitId,
+                x.DigitalDossierId,
+                Documents = x.Documents.Select(d => d.DocumentId).ToList(),
+                Dispositions = x.Documents.Where(d => d.DispositionProcessId != null).Select(d =>
+                    new PhysicalDispositionDetails(d.DocumentId, d.DispositionProcessId!.Value, d.DisposedAt!.Value,
+                        d.DisposedBy!, d.DispositionReference!, d.DispositionEvidenceDocumentId!.Value)).ToList()
             })
             .SingleOrDefaultAsync(ct);
 
@@ -175,28 +224,45 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
             row.FilePlanCode,
             row.LocationId,
             row.Status.ToString(),
-            row.Documents);
+            row.Documents, row.OwnerUnitId, row.DigitalDossierId, row.Dispositions);
     }
 
     public async Task<IReadOnlyList<LocationOccupancyItem>> GetLocationOccupancyAsync(
         CancellationToken ct)
     {
-        var folders = _db.Folders.AsNoTracking();
+        var folders = await VisibleFolders(ct);
 
         // Doluluk yalnız o konuma doğrudan yerleştirilmiş klasörlerden sayılır;
         // alt düğüm toplamı arayüzde ağaç üzerinden hesaplanır.
-        return await _db.Locations.AsNoTracking()
+        var types = await _db.LocationTypes.AsNoTracking().ToDictionaryAsync(x => x.Code, ct);
+
+        var rows = await _db.Locations.AsNoTracking()
             .OrderBy(x => x.Code)
-            .Select(x => new LocationOccupancyItem(
+            .Select(x => new
+            {
                 x.Id,
                 x.ParentId,
-                x.Type.ToString(),
+                x.TypeCode,
                 x.Code,
                 x.Name,
                 x.Barcode,
                 x.Capacity,
-                folders.Count(f => f.LocationId == x.Id)))
+                x.IsActive,
+                FolderCount = folders.Count(f => f.LocationId == x.Id),
+            })
             .ToListAsync(ct);
+
+        return rows.Select(x =>
+        {
+            types.TryGetValue(x.TypeCode, out var type);
+            return new LocationOccupancyItem(
+                x.Id, x.ParentId, x.TypeCode, x.Code, x.Name, x.Barcode, x.Capacity,
+                x.FolderCount, x.IsActive,
+                type?.Name ?? x.TypeCode,
+                type?.Level ?? 0,
+                type?.CanStoreFolder ?? false,
+                type?.AllowsCapacity ?? false);
+        }).ToList();
     }
 
     public async Task<PagedResult<LoanDetailsItem>> GetLoansPageAsync(
@@ -205,7 +271,8 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
         DateTimeOffset now,
         CancellationToken ct)
     {
-        var query = _db.Loans.AsNoTracking();
+        var folders = await VisibleFolders(ct);
+        var query = _db.Loans.AsNoTracking().Where(l => folders.Any(f => f.Id == l.FolderId));
 
         if (Enum.TryParse<PhysicalLoanStatus>(filter.Status, ignoreCase: true, out var status))
             query = query.Where(x => x.Status == status);
@@ -253,11 +320,13 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
                     FolderTitle = folder.Title,
                     folder.FilePlanCode,
                     loan.BorrowerSubjectId,
+                    loan.CheckedOutBy,
                     loan.Purpose,
                     loan.Status,
                     loan.CheckedOutAt,
                     loan.DueAt,
-                    loan.ReturnedAt
+                    loan.ReturnedAt,
+                    loan.ReturnNote
                 })
             .ToListAsync(ct);
 
@@ -278,7 +347,9 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
                 x.DueAt,
                 x.ReturnedAt,
                 isOverdue,
-                isOverdue ? (int)(now - x.DueAt).TotalDays : 0);
+                isOverdue ? (int)(now - x.DueAt).TotalDays : 0,
+                x.ReturnNote,
+                x.CheckedOutBy);
         }).ToList();
 
         return new PagedResult<LoanDetailsItem>(items, page.Page, page.PageSize, totalCount);
@@ -288,7 +359,8 @@ internal sealed class EfPhysicalArchiveQueries : IPhysicalArchiveQueries
         DateTimeOffset now,
         CancellationToken ct)
     {
-        var rows = await _db.Loans.AsNoTracking()
+        var folders = await VisibleFolders(ct);
+        var rows = await _db.Loans.AsNoTracking().Where(l => folders.Any(f => f.Id == l.FolderId))
             .Where(x =>
                 x.Status != PhysicalLoanStatus.Returned
                 && x.DueAt < now)

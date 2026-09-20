@@ -140,10 +140,11 @@ internal sealed class SecurityScanWorker : BackgroundService
 
         if (!scan.IsClean)
         {
+            var limitExceeded = scan.ThreatName?.StartsWith("Heuristics.Limits.Exceeded", StringComparison.Ordinal) == true;
             await PublishRejectedAsync(
                 staged,
-                "malware_detected",
-                "ClamAV detected malicious content.",
+                limitExceeded ? "security_scan_limit_exceeded" : "malware_detected",
+                limitExceeded ? "Dosya güvenlik tarayıcısının kapasite sınırını aştı. Tarama tamamlanmadığı için dosya kabul edilmedi." : "ClamAV detected malicious content.",
                 scan.ThreatName,
                 detectedMimeType,
                 cancellationToken);
