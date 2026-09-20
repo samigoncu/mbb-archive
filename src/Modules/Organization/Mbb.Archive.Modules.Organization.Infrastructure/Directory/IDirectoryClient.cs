@@ -28,3 +28,4 @@ public interface IDirectoryClient
     Task<Result<IReadOnlyList<DirectoryUnit>>> ListUnitsAsync(
         CancellationToken cancellationToken);
 }
+

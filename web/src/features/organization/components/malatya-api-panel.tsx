@@ -57,9 +57,9 @@ export function MalatyaApiPanel({
         onUpdated={(next) => setSettings(next)}
       />
 
-      {/* 2. Malatya API Bağlantı Bilgileri */}
+      {/* 2. API Bağlantı Bilgileri */}
       <section className="rounded-xl border border-border bg-card p-5 shadow-flat">
-        <h3 className="text-base font-semibold">Malatya API Bağlantı Ayarları</h3>
+        <h3 className="text-base font-semibold">API Bağlantı Ayarları</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Token alma (/Auth/login) ve SMS servisleri için gerekli API erişim bilgileri.
         </p>
@@ -84,7 +84,7 @@ export function MalatyaApiPanel({
             }
             setSettings(res.data);
             setPassword("");
-            toast.success("Malatya API ayarları başarıyla kaydedildi.");
+            toast.success("API ayarları başarıyla kaydedildi.");
           }}
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

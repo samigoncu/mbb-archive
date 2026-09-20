@@ -15,3 +15,4 @@ internal sealed class LdapConnectionTester : ILdapConnectionTester
         CancellationToken ct)
         => LdapDirectoryClient.TestConnectionAsync(host, port, useSsl, bindDn, password, timeoutSeconds, ct);
 }
+

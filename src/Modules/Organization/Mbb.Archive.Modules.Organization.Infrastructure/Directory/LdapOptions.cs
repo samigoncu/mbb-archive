@@ -40,3 +40,4 @@ public sealed class LdapOptions
     public bool IsConfigured
         => !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(UserSearchBase);
 }
+

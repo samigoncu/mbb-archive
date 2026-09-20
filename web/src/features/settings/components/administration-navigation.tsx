@@ -14,7 +14,7 @@ const definitions = [
   { href: "/tanimlamalar/yerlesim-seviyeleri", label: "Arşiv yerleşim seviyeleri", description: "Bina, oda, dolap, raf kalıbı", icon: Layers, permission: "physical-archive.read" },
   { href: "/tanimlamalar/cbs", label: "CBS servisleri", description: "WFS, WMS ve harita altlığı", icon: Map, permission: "geo.read" },
   { href: "/tanimlamalar/ldap", label: "LDAP dizin entegrasyonu", description: "Bağlantı, eşleme ve eşitleme", icon: Server, permission: "organization.manage" },
-  { href: "/tanimlamalar/api", label: "Belediye API entegrasyonu", description: "Malatya API, SMS ve Dizin", icon: Globe, permission: "organization.manage" },
+  { href: "/tanimlamalar/api", label: "API entegrasyonu", description: "API, SMS ve Dizin", icon: Globe, permission: "organization.manage" },
   { href: "/tanimlamalar/paylasimlar", label: "Paylaşımlar", description: "Kaynak erişim izinleri", icon: Users, permission: "access.grants.read" },
 ];
 const settings = [

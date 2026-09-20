@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/features/access/api/get-current-user";
 import { loadMalatyaApiSettingsAction } from "@/features/organization/api/malatya-api-actions";
 import { MalatyaApiPanel } from "@/features/organization/components/malatya-api-panel";
 
-export const metadata = { title: "Malatya Belediye API Entegrasyonu" };
+export const metadata = { title: "API Entegrasyonu" };
 
 export default async function Page() {
   const user = await getCurrentUser();
@@ -16,8 +16,8 @@ export default async function Page() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Malatya Belediye API Entegrasyonu"
-        description="Malatya Büyükşehir Belediyesi API servisleri: Token alma, OTP/Normal SMS gönderimi ve Dizin geçiş yönetimi."
+        title="API Entegrasyonu"
+        description="API servisleri: Token alma, OTP/Normal SMS gönderimi ve Dizin geçiş yönetimi."
         actions={
           <Link
             href="/tanimlamalar/ldap"

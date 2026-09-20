@@ -65,7 +65,7 @@ export function DirectorySourceSwitchCard({
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 font-medium text-sm">
               <Globe className="size-4 text-emerald-600 dark:text-emerald-400" />
-              Malatya Belediye API
+              API Entegrasyonu
             </span>
             <span
               className={`text-xs font-semibold ${
