@@ -118,7 +118,7 @@ operations.recovery_drills
 
 ## Kurulum ve çalıştırma
 
-Gereksinimler: **Docker Desktop**, **.NET 10 SDK**, **Node.js 22+**.
+Gereksinimler: **Docker Desktop**, **.NET 10 SDK**, **Node.js** (En son sürüm / Latest).
 Python worker'ları Docker içinde çalışır; yerel Python kurulumu gerekmez.
 
 ```bash
