@@ -98,3 +98,41 @@ it("hızlı başlık şablon çipine tıklandığında evrak konusunu günceller
   expect(textarea.value).toBe("Meclis Kararı");
 });
 
+it("ADSL ekim gibi parçalı adlarda semantik konuyu ve standart dosya adını otomatik belirler", async () => {
+  vi.mocked(uploadScannedDocumentAction).mockResolvedValue({ success: true, message: "Yüklendi" });
+  const file = new File(["dummy"], "ADSL ekim.pdf", { type: "application/pdf" });
+  const view = render(<ScanIndexingStudio units={[unit()]} initialContext={context()} metadataSchemas={[]} />);
+  fireEvent.change(view.container.querySelector('input[type="file"]')!, { target: { files: [file] } });
+
+  const textarea = view.container.querySelector("#scan-subject") as HTMLTextAreaElement;
+  expect(textarea.value).toBe("Ekim Ayı ADSL / İnternet Hizmet Faturası");
+
+  fireEvent.submit(view.container.querySelector("form")!);
+  await waitFor(() => expect(uploadScannedDocumentAction).toHaveBeenCalled());
+
+  const data = vi.mocked(uploadScannedDocumentAction).mock.calls[0][0];
+  expect(data.get("title")).toBe("Ekim Ayı ADSL / İnternet Hizmet Faturası");
+  const uploadedFiles = data.getAll("files") as File[];
+  expect(uploadedFiles[0].name).toBe("Ekim_Ayi_ADSL_Internet_Hizmet_Faturasi.pdf");
+});
+
+it("Dosya Adını Eşle düğmesi ile evrak konusuna göre dosya adını standartlaştırır", async () => {
+  vi.mocked(uploadScannedDocumentAction).mockResolvedValue({ success: true, message: "Yüklendi" });
+  const file = new File(["dummy"], "belge.pdf", { type: "application/pdf" });
+  const view = render(<ScanIndexingStudio units={[unit()]} initialContext={context()} metadataSchemas={[]} />);
+  fireEvent.change(view.container.querySelector('input[type="file"]')!, { target: { files: [file] } });
+
+  const textarea = view.container.querySelector("#scan-subject") as HTMLTextAreaElement;
+  fireEvent.change(textarea, { target: { value: "İmar ve Şehircilik Plan Tadilatı" } });
+
+  const syncBtn = screen.getByRole("button", { name: "Dosya Adını Eşle" });
+  fireEvent.click(syncBtn);
+
+  fireEvent.submit(view.container.querySelector("form")!);
+  await waitFor(() => expect(uploadScannedDocumentAction).toHaveBeenCalled());
+
+  const data = vi.mocked(uploadScannedDocumentAction).mock.calls[0][0];
+  const uploadedFiles = data.getAll("files") as File[];
+  expect(uploadedFiles[0].name).toBe("Imar_ve_Sehircilik_Plan_Tadilati.pdf");
+});
+

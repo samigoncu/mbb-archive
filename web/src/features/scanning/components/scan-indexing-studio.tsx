@@ -38,6 +38,10 @@ import {
   suggestDocumentSubject,
   buildSubjectChips,
   isGenericScannerFilename,
+  detectSemanticSubjectFromKeywords,
+  generateStandardArchiveFilename,
+  renameScannedFile,
+  formatFilenameToTitle,
 } from "../model/scan-subject-suggester";
 
 const documentStatusLabels: Record<string, string> = {
@@ -115,20 +119,63 @@ export function ScanIndexingStudio({
 
   async function triggerSubjectSuggestion() {
     const fileToInspect = selectedPage?.file ?? pages[0]?.file;
+    if (!fileToInspect) return;
     const res = await suggestDocumentSubject({
       file: fileToInspect,
       classificationTitle: classification?.title,
+      classificationCode: classification?.code,
       dossierTitle: dossier?.title,
       unitName: units.find((u) => u.id === ownerUnitId)?.name,
     });
     setSubject(res.subject);
+    if (res.suggestedFilename && selectedPage) {
+      setPages((prev) =>
+        prev.map((p) =>
+          p.id === selectedPage.id
+            ? { ...p, file: renameScannedFile(p.file, res.suggestedFilename!) }
+            : p,
+        ),
+      );
+    }
     if (res.source === "content") {
       toast.success(`Belge içeriğinden tespit edildi: "${res.subject}"`);
+    } else if (res.source === "semantic") {
+      toast.success(`Dosya ilişkisi tespit edildi: "${res.subject}"`);
     } else if (res.source === "classification") {
       toast.success(`SDP konusuna göre önerildi: "${res.subject}"`);
     } else {
       toast.success(`Önerilen başlık uygulandı: "${res.subject}"`);
     }
+  }
+
+  function renamePageFile(index: number, newName: string) {
+    if (!newName.trim()) return;
+    setPages((prev) =>
+      prev.map((page, i) => {
+        if (i !== index) return page;
+        const extMatch = page.file.name.match(/\.([a-zA-Z0-9]+)$/);
+        const ext = extMatch ? `.${extMatch[1]}` : "";
+        let finalName = newName.trim();
+        if (ext && !finalName.toLowerCase().endsWith(ext.toLowerCase())) {
+          finalName += ext;
+        }
+        return {
+          ...page,
+          file: renameScannedFile(page.file, finalName),
+        };
+      }),
+    );
+  }
+
+  function syncFilenameWithSubject() {
+    if (!selectedPage || !subject.trim()) return;
+    const newFilename = generateStandardArchiveFilename(
+      subject.trim(),
+      selectedPage.file.name,
+      classification?.code,
+    );
+    renamePageFile(selectedIndex, newFilename);
+    toast.success(`Dosya adı güncellendi: ${newFilename}`);
   }
 
   function recalculateGroups(list: ScannedPage[]): ScannedPage[] {
@@ -148,15 +195,28 @@ export function ScanIndexingStudio({
 
     const newPages: ScannedPage[] = incoming.map((file, index) => {
       const isSep = /ayrac|separator|patch|barkod|sep|ayirici/i.test(file.name);
+
+      // Semantik anahtar kelime eşleşmesi (örn: "ADSL ekim.pdf", "maski_su_ekim.pdf")
+      const semanticSubject = detectSemanticSubjectFromKeywords(file.name);
+      let pageFile = file;
+      if (semanticSubject) {
+        const standardFilename = generateStandardArchiveFilename(
+          semanticSubject,
+          file.name,
+          classification?.code,
+        );
+        pageFile = renameScannedFile(file, standardFilename);
+      }
+
       return {
-        id: `${Date.now()}-${index}-${file.name}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
+        id: `${Date.now()}-${index}-${pageFile.name}`,
+        file: pageFile,
+        previewUrl: URL.createObjectURL(pageFile),
         isPdf:
-          file.type === "application/pdf" ||
-          file.name.toLowerCase().endsWith(".pdf"),
+          pageFile.type === "application/pdf" ||
+          pageFile.name.toLowerCase().endsWith(".pdf"),
         rotation: 0,
-        isOffice: isOfficeFile(file),
+        isOffice: isOfficeFile(pageFile),
         isSeparator: isSep,
       };
     });
@@ -168,28 +228,45 @@ export function ScanIndexingStudio({
     });
 
     // Senkron başlangıç değeri (anında submit ve UI tutarlılığı için)
+    const firstSemantic = detectSemanticSubjectFromKeywords(incoming[0].name);
     const rawName = incoming[0].name.replace(/\.[^/.]+$/, "");
-    const initialSyncSubject = isGenericScannerFilename(incoming[0].name)
-      ? (classification?.title
-          ? `${classification.title} Evrakı`
-          : (dossier?.title ? `${dossier.title} Üst Yazısı` : rawName))
-      : rawName;
+    const initialSyncSubject = firstSemantic
+      ?? (isGenericScannerFilename(incoming[0].name)
+          ? (classification?.title
+              ? `${classification.title} Evrakı`
+              : (dossier?.title ? `${dossier.title} Üst Yazısı` : rawName))
+          : rawName);
 
     setSubject((current) =>
       current.trim().length > 0 ? current : initialSyncSubject,
     );
 
     // Asenkron analiz: PDF gömülü metninden Konu:, Karar No, Dilekçe tespiti
-    const firstFile = incoming[0];
+    const firstFile = newPages[0].file;
     void suggestDocumentSubject({
       file: firstFile,
       classificationTitle: classification?.title,
+      classificationCode: classification?.code,
       dossierTitle: dossier?.title,
       unitName: units.find((u) => u.id === ownerUnitId)?.name,
     }).then((suggestion) => {
-      if (suggestion.source === "content") {
+      if (suggestion.source === "content" || suggestion.source === "semantic") {
         setSubject(suggestion.subject);
-        toast.info(`Belge içeriğinden konu tespit edildi: "${suggestion.subject}"`);
+        if (suggestion.source === "content") {
+          toast.info(`Belge içeriğinden konu tespit edildi: "${suggestion.subject}"`);
+        } else {
+          toast.info(`Dosya adından ilişki tespit edildi: "${suggestion.subject}"`);
+        }
+      }
+      if (suggestion.suggestedFilename) {
+        const targetId = newPages[0].id;
+        setPages((prev) =>
+          prev.map((p) =>
+            p.id === targetId && (suggestion.source === "content" || suggestion.source === "semantic" || isGenericScannerFilename(incoming[0].name))
+              ? { ...p, file: renameScannedFile(p.file, suggestion.suggestedFilename!) }
+              : p,
+          ),
+        );
       }
     });
   }
@@ -434,7 +511,18 @@ export function ScanIndexingStudio({
               <div><h2 className="text-sm font-semibold">Dosya hazırlama</h2><p className="mt-1 text-xs text-muted-foreground">Dosya başına en fazla {formatFileSize(maxUploadBytes)}.</p></div>
               <div className="flex flex-wrap gap-2"><Button type="button" size="sm" disabled={isSubmitting} onClick={() => fileInputRef.current?.click()}><Upload className="size-4" aria-hidden />Dosya ekle</Button><Button type="button" size="sm" variant="outline" disabled={isSubmitting} onClick={startCamera}><Camera className="size-4" aria-hidden />Kamera</Button></div>
             </div>
-            <ScanFileQueue pages={pages} selectedId={selectedPage?.id} disabled={isSubmitting} maxUploadBytes={maxUploadBytes} onSelect={setSelectedIndex} onRotate={rotatePage} onRemove={removePage} onSeparator={toggleSeparator} onDetectSeparators={autoDetectSeparators} />
+            <ScanFileQueue
+              pages={pages}
+              selectedId={selectedPage?.id}
+              disabled={isSubmitting}
+              maxUploadBytes={maxUploadBytes}
+              onSelect={setSelectedIndex}
+              onRotate={rotatePage}
+              onRemove={removePage}
+              onSeparator={toggleSeparator}
+              onDetectSeparators={autoDetectSeparators}
+              onRename={renamePageFile}
+            />
             <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground"><span>{pages.length ? `${pages.length} dosya yüklemeye hazır.` : "Henüz dosya eklenmedi."}</span> {pages.length > 0 && `Toplam ${formatFileSize(totalBytes)} · ${distinctGroups.length} belge grubu`}</div>
           </section>
           <ScanPreview page={selectedPage} zoom={zoom} setZoom={setZoom} dragging={isDragging} disabled={isSubmitting} onDragChange={setIsDragging} onDrop={handleDrop} onSelectFiles={() => fileInputRef.current?.click()} />
@@ -448,15 +536,27 @@ export function ScanIndexingStudio({
                 <label htmlFor="scan-subject" className="font-medium">
                   Evrak konusu <span className="text-destructive" aria-hidden>*</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={triggerSubjectSuggestion}
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-                  title="Seçili dosya ve SDP bağlamına göre başlık öner"
-                >
-                  <Sparkles className="size-3 text-amber-500" aria-hidden />
-                  Başlık Öner
-                </button>
+                <div className="flex items-center gap-2.5">
+                  {selectedPage && subject.trim() && (
+                    <button
+                      type="button"
+                      onClick={syncFilenameWithSubject}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-600 hover:underline dark:text-sky-400"
+                      title="Evrak konusuna göre dosya adını kurumsal arşive uygun olarak güncelle"
+                    >
+                      Dosya Adını Eşle
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={triggerSubjectSuggestion}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                    title="Seçili dosya ve SDP bağlamına göre başlık öner"
+                  >
+                    <Sparkles className="size-3 text-amber-500" aria-hidden />
+                    Başlık Öner
+                  </button>
+                </div>
               </div>
               <textarea
                 id="scan-subject"
