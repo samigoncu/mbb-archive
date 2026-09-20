@@ -1,6 +1,7 @@
 "use server";
 
 import { apiGet } from "@/lib/api/api-client";
+import { whenPermitted } from "@/lib/api/when-permitted";
 import type { UnitTypeItem } from "@/features/organization/model/unit-type";
 
 /**
@@ -10,9 +11,8 @@ import type { UnitTypeItem } from "@/features/organization/model/unit-type";
  * kullanıcıda boş döner; birim listesi seviyesiz de çalışır.
  */
 export async function getUnitTypes(): Promise<UnitTypeItem[]> {
-  try {
-    return await apiGet<UnitTypeItem[]>("/organization/unit-types", { cache: "no-store" });
-  } catch {
-    return [];
-  }
+  return whenPermitted(
+    apiGet<UnitTypeItem[]>("/organization/unit-types", { cache: "no-store" }),
+    [],
+  );
 }

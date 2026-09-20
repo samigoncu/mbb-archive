@@ -3,82 +3,9 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mbb.Archive.BuildingBlocks.Application;
-using Mbb.Archive.Modules.Organization.Application.Abstractions;
 using Mbb.Archive.Modules.Organization.Application.Directory;
 
 namespace Mbb.Archive.Modules.Organization.Infrastructure.Directory;
-
-/// <summary>
-/// LDAP/Active Directory yapılandırmasının ortam değişkeni yolu.
-/// </summary>
-/// <remarks>
-/// Ayar artık öncelikle veritabanından, yönetim ekranı üzerinden gelir
-/// (<see cref="IDirectoryRuntime"/>). Bu tip, dizin kaydı veritabanına
-/// taşınmadan önce kurulmuş ortamların çalışmayı sürdürmesi için duruyor:
-/// §0.11 ve §28 gereği varsayılanlar boştur ve boşken bağlayıcı devre dışı kalır.
-/// </remarks>
-public sealed class LdapOptions
-{
-    public const string SectionName = "Directory:Ldap";
-
-    public string Host { get; init; } = string.Empty;
-    public int Port { get; init; } = 636;
-    public bool UseSsl { get; init; } = true;
-
-    /// <summary>Okuma yetkili servis hesabı; yazma yetkisi verilmemelidir.</summary>
-    public string BindDn { get; init; } = string.Empty;
-    public string BindPassword { get; init; } = string.Empty;
-
-    /// <summary>Kullanıcı aramasının başlayacağı taban, örn. <c>OU=Personel,DC=mbb,DC=gov,DC=tr</c>.</summary>
-    public string UserSearchBase { get; init; } = string.Empty;
-
-    /// <summary>Birim ağacının okunacağı taban.</summary>
-    public string UnitSearchBase { get; init; } = string.Empty;
-
-    /// <summary>Kullanıcıyı sicil/kullanıcı adıyla bulan süzgeç; <c>{0}</c> özne kimliğidir.</summary>
-    public string UserFilter { get; init; } = "(&(objectClass=user)(sAMAccountName={0}))";
-
-    public string UnitFilter { get; init; } = "(objectClass=organizationalUnit)";
-
-    /// <summary>Kullanıcının biriminin okunacağı öznitelik.</summary>
-    public string UnitAttribute { get; init; } = "department";
-
-    public string GroupAttribute { get; init; } = "memberOf";
-
-    public string DisplayNameAttribute { get; init; } = "displayName";
-
-    public string MailAttribute { get; init; } = "mail";
-
-    public int TimeoutSeconds { get; init; } = 20;
-
-    public bool IsConfigured
-        => !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(UserSearchBase);
-}
-
-/// <summary>Dizinden okunan kullanıcı künyesi.</summary>
-public sealed record DirectoryUser(
-    string SubjectId,
-    string DisplayName,
-    string? UnitReference,
-    IReadOnlyList<string> Groups, bool IsActive = true,
-    string? Email = null, string? Title = null);
-
-public sealed record DirectoryUnit(
-    string DistinguishedName,
-    string Name,
-    string? ParentDistinguishedName);
-
-public interface IDirectoryClient
-{
-    bool IsConfigured { get; }
-
-    Task<Result<DirectoryUser>> FindUserAsync(
-        string subjectId,
-        CancellationToken cancellationToken);
-
-    Task<Result<IReadOnlyList<DirectoryUnit>>> ListUnitsAsync(
-        CancellationToken cancellationToken);
-}
 
 /// <summary>
 /// LDAP okuma bağlayıcısı. Yalnızca <em>okur</em>: kullanıcı ve birim
@@ -104,10 +31,6 @@ internal sealed class LdapDirectoryClient : IDirectoryClient
     /// <summary>
     /// Yönetim ekranından kaydedilen ayar, ortam değişkeninden gelene üstündür.
     /// </summary>
-    /// <remarks>
-    /// Ortam değişkeni yolu, dizin kaydı veritabanına taşınmadan önce kurulmuş
-    /// ortamlar için duruyor: panelde dizin etkinleştirilmemişse eskisi çalışır.
-    /// </remarks>
     private LdapOptions Options
     {
         get
@@ -257,10 +180,6 @@ internal sealed class LdapDirectoryClient : IDirectoryClient
         return connection;
     }
 
-    /// <summary>
-    /// DN'in bir üst seviyesi: <c>OU=Yazilim,OU=BID,DC=…</c> → <c>OU=BID,DC=…</c>.
-    /// Kaçırılmış virgüller (<c>\,</c>) ayraç sayılmaz.
-    /// </summary>
     internal static string? ParentOf(string distinguishedName)
     {
         for (var i = 0; i < distinguishedName.Length; i++)
@@ -278,7 +197,6 @@ internal sealed class LdapDirectoryClient : IDirectoryClient
         return null;
     }
 
-    /// <summary>RFC 4515 kaçışı; süzgeç enjeksiyonunu engeller.</summary>
     internal static string EscapeFilter(string value)
         => value
             .Replace("\\", "\\5c", StringComparison.Ordinal)
@@ -322,4 +240,39 @@ internal sealed class LdapDirectoryClient : IDirectoryClient
     private static Error Unreachable => Error.Failure(
         "directory.unreachable",
         "The LDAP directory is unreachable.");
+
+    public static Task<Result<string>> TestConnectionAsync(
+        string host,
+        int port,
+        bool useSsl,
+        string bindDn,
+        string password,
+        int timeoutSeconds,
+        CancellationToken cancellationToken)
+    {
+        return Task.Run(() =>
+        {
+            try
+            {
+                var options = new LdapOptions
+                {
+                    Host = host,
+                    Port = port,
+                    UseSsl = useSsl,
+                    BindDn = bindDn,
+                    BindPassword = password,
+                    TimeoutSeconds = Math.Clamp(timeoutSeconds, 1, 30)
+                };
+
+                using var connection = Connect(options);
+                return Result<string>.Success("LDAP sunucusuna başarıyla bağlanıldı ve kimlik doğrulandı.");
+            }
+            catch (Exception ex)
+            {
+                return Result<string>.Failure(Error.Failure(
+                    "directory.test_failed",
+                    $"LDAP bağlantısı başarısız oldu: {ex.Message}"));
+            }
+        }, cancellationToken);
+    }
 }

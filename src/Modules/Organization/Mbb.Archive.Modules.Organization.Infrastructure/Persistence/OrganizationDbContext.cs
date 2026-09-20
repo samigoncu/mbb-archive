@@ -22,6 +22,7 @@ public sealed class OrganizationDbContext : DbContext, IUnitOfWork<OrganizationB
     internal DbSet<UnitMembership> Memberships => Set<UnitMembership>();
     internal DbSet<DirectorySettings> DirectorySettings => Set<DirectorySettings>();
     internal DbSet<DirectoryUserRecord> DirectoryUsers => Set<DirectoryUserRecord>();
+    internal DbSet<MalatyaApiSettings> MalatyaApiSettings => Set<MalatyaApiSettings>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -176,6 +177,24 @@ public sealed class OrganizationDbContext : DbContext, IUnitOfWork<OrganizationB
             entity.Property(x => x.LastSeenAt).HasColumnName("last_seen_at");
             entity.HasIndex(x => x.SubjectId).IsUnique();
             entity.Ignore(x => x.DomainEvents);
+        });
+
+        builder.Entity<MalatyaApiSettings>(entity =>
+        {
+            entity.ToTable("malatya_api_settings", "organization");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(x => x.BaseUrl).HasColumnName("base_url").HasMaxLength(300);
+            entity.Property(x => x.UserName).HasColumnName("user_name").HasMaxLength(200);
+            entity.Property(x => x.PasswordCipher).HasColumnName("password_cipher").HasMaxLength(4000);
+            entity.Property(x => x.SmsProvider).HasColumnName("sms_provider").HasMaxLength(100);
+            entity.Property(x => x.IsDirectorySyncEnabled).HasColumnName("is_directory_sync_enabled");
+            entity.Property(x => x.LastTestedAt).HasColumnName("last_tested_at");
+            entity.Property(x => x.LastTestStatus).HasColumnName("last_test_status").HasMaxLength(500);
+            entity.Property(x => x.Version).HasColumnName("version").IsConcurrencyToken();
+            entity.Property(x => x.UpdatedBy).HasColumnName("updated_by").HasMaxLength(300);
+            entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+            entity.HasData(new MalatyaApiSettings());
         });
 
         base.OnModelCreating(builder);

@@ -56,6 +56,7 @@ public static class OrganizationEndpoints
             .WithAccessAudit("access.permission-changed.v1", "subject", "subjectId");
 
         endpoints.MapDirectoryEndpoints();
+        endpoints.MapMalatyaApiEndpoints();
         endpoints.MapUnitAdministrationEndpoints();
         return endpoints;
     }

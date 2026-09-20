@@ -63,6 +63,11 @@ jobs:
       - name: Backend build
         run: dotnet build Mbb.Archive.slnx --configuration Release --no-restore
 
+      # Model ile migration aynı commit'te kalmalı: aksi hâlde şema sessizce
+      # geride kalır, derleme ve testler yeşil olsa da dağıtım durur.
+      - name: Migration drift
+        run: ./scripts/verify_migrations.sh
+
       - name: Backend tests
         env:
           MBB_ARCHIVE_TEST_POSTGRES: "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=mbb_archive_ci_tests"

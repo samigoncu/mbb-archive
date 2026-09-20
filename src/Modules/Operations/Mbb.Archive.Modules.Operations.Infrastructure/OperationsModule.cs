@@ -46,6 +46,8 @@ public static class OperationsModule
         services.AddOptions<EmailNotificationOptions>().Bind(configuration.GetSection(EmailNotificationOptions.SectionName));
         services.AddScoped<EmailNotificationChannel>();
         services.AddScoped<INotificationChannel>(sp => sp.GetRequiredService<EmailNotificationChannel>());
+        services.AddScoped<MalatyaSmsNotificationChannel>();
+        services.AddScoped<INotificationChannel>(sp => sp.GetRequiredService<MalatyaSmsNotificationChannel>());
 
         services.AddSingleton(TimeProvider.System);
 

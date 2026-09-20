@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, FileSliders, FolderTree, Layers, Map, Network, Palette, ScanLine, Server, Settings2, ShieldCheck, Users, Eye, Upload, Activity, ChevronRight } from "lucide-react";
+import { Building2, FileSliders, FolderTree, Globe, Layers, Map, Network, Palette, ScanLine, Server, Settings2, ShieldCheck, Users, Eye, Upload, Activity, ChevronRight } from "lucide-react";
 import type { CurrentUser } from "@/features/access/model/current-user";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ const definitions = [
   { href: "/tanimlamalar/yerlesim-seviyeleri", label: "Arşiv yerleşim seviyeleri", description: "Bina, oda, dolap, raf kalıbı", icon: Layers, permission: "physical-archive.read" },
   { href: "/tanimlamalar/cbs", label: "CBS servisleri", description: "WFS, WMS ve harita altlığı", icon: Map, permission: "geo.read" },
   { href: "/tanimlamalar/ldap", label: "LDAP dizin entegrasyonu", description: "Bağlantı, eşleme ve eşitleme", icon: Server, permission: "organization.manage" },
+  { href: "/tanimlamalar/api", label: "Belediye API entegrasyonu", description: "Malatya API, SMS ve Dizin", icon: Globe, permission: "organization.manage" },
   { href: "/tanimlamalar/paylasimlar", label: "Paylaşımlar", description: "Kaynak erişim izinleri", icon: Users, permission: "access.grants.read" },
 ];
 const settings = [

@@ -28,7 +28,10 @@ public static class ClassificationEndpoints
   {
     var group = endpoints.MapGroup("/api/v1/classification").WithTags("Classification")
               .RequireAuthorization();
-    group.MapGet("/file-plans", ListFilePlans).RequireAuthorization("permission:classification.read"); group.MapPost("/file-plans", CreateFilePlan).RequireAuthorization("permission:classification.manage").WithAccessAudit("access.file-plan-created.v1", "file-plan"); group.MapPost("/file-plans/{id:guid}/items", AddFilePlanItem).RequireAuthorization("permission:classification.manage").WithAccessAudit("access.file-plan-item-added.v1", "file-plan", "id"); group.MapGet("/file-plans/{id:guid}", GetFilePlan).RequireAuthorization("permission:classification.read");
+    group.MapGet("/file-plans", ListFilePlans).RequireAuthorization("permission:classification.read");
+    group.MapPost("/file-plans", CreateFilePlan).RequireAuthorization("permission:classification.manage").WithAccessAudit("access.file-plan-created.v1", "file-plan");
+    group.MapPost("/file-plans/{id:guid}/items", AddFilePlanItem).RequireAuthorization("permission:classification.manage").WithAccessAudit("access.file-plan-item-added.v1", "file-plan", "id");
+    group.MapGet("/file-plans/{id:guid}", GetFilePlan).RequireAuthorization("permission:classification.read");
     // Dosya planı ve konu kodu düzeltme. Kod değiştirilemez: belgeler, dijital
     // dosyalar, fiziksel klasörler ve birim atamaları koda göre bağlanır.
     group.MapPut("/file-plans/{id:guid}", async (Guid id, RenamePlanRequest request, FilePlanManagementHandlers handler, CancellationToken ct)
@@ -60,7 +63,11 @@ public static class ClassificationEndpoints
       var result = await handler.Handle(id, ct);
       return result.IsFailure ? ApiResults.Problem(result.Error) : Results.NoContent();
     }).RequireAuthorization("permission:classification.manage").WithAccessAudit("access.file-plan-retired.v1", "file-plan", "id");
-    group.MapGet("/metadata-schemas", ListSchemas).RequireAuthorization("permission:classification.read"); group.MapPost("/metadata-schemas", CreateSchema).RequireAuthorization("permission:classification.manage"); group.MapPost("/metadata-schemas/{id:guid}/fields", AddField).RequireAuthorization("permission:classification.manage"); group.MapPost("/metadata-schemas/{id:guid}/publish", PublishSchema).RequireAuthorization("permission:classification.manage"); group.MapGet("/metadata-schemas/{id:guid}", GetSchema).RequireAuthorization("permission:classification.read");
+    group.MapGet("/metadata-schemas", ListSchemas).RequireAuthorization("permission:classification.read");
+    group.MapPost("/metadata-schemas", CreateSchema).RequireAuthorization("permission:classification.manage");
+    group.MapPost("/metadata-schemas/{id:guid}/fields", AddField).RequireAuthorization("permission:classification.manage");
+    group.MapPost("/metadata-schemas/{id:guid}/publish", PublishSchema).RequireAuthorization("permission:classification.manage");
+    group.MapGet("/metadata-schemas/{id:guid}", GetSchema).RequireAuthorization("permission:classification.read");
     // Üstveri şeması düzeltmeleri. Alan değişiklikleri yalnız taslak şemada.
     group.MapPut("/metadata-schemas/{id:guid}", async (Guid id, RenameSchemaRequest request, MetadataSchemaManagementHandlers handler, CancellationToken ct)
       => Apply(await handler.Handle(new RenameMetadataSchemaCommand(id, request.Name), ct)))
@@ -83,7 +90,8 @@ public static class ClassificationEndpoints
     group.MapPost("/metadata-schemas/{id:guid}/revert-to-draft", async (Guid id, MetadataSchemaManagementHandlers handler, CancellationToken ct)
       => Apply(await handler.Handle(new RevertMetadataSchemaToDraftCommand(id), ct)))
       .RequireAuthorization("permission:classification.manage");
-    group.MapPost("/documents/{documentId:guid}/classifications", ClassifyDocument).RequireAuthorization("permission:documents.metadata.write"); group.MapPut("/documents/{documentId:guid}/metadata/{schemaId:guid}", SetMetadata).RequireAuthorization("permission:documents.metadata.write"); return endpoints;
+    group.MapPost("/documents/{documentId:guid}/classifications", ClassifyDocument).RequireAuthorization("permission:documents.metadata.write");
+    group.MapPut("/documents/{documentId:guid}/metadata/{schemaId:guid}", SetMetadata).RequireAuthorization("permission:documents.metadata.write"); return endpoints;
   }
   private static async Task<IResult> ListFilePlans(int? page, int? pageSize, GetFilePlansQueryHandler h, CancellationToken ct) { var result = await h.Handle(new(page ?? 1, pageSize ?? PageRequest.DefaultPageSize), ct); return result.IsFailure ? ApiResults.Problem(result.Error) : Results.Ok(result.Value); }
   private static async Task<IResult> ListSchemas(int? page, int? pageSize, GetMetadataSchemasQueryHandler h, CancellationToken ct) { var result = await h.Handle(new(page ?? 1, pageSize ?? PageRequest.DefaultPageSize), ct); return result.IsFailure ? ApiResults.Problem(result.Error) : Results.Ok(result.Value); }

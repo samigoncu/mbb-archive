@@ -1,6 +1,7 @@
 "use server";
 
 import { apiGet } from "@/lib/api/api-client";
+import { whenPermitted } from "@/lib/api/when-permitted";
 import type { LocationType } from "@/features/physical-archive/model/location";
 
 export type LocationOccupancyItem = {
@@ -21,12 +22,11 @@ export type LocationOccupancyItem = {
 };
 
 export async function getLocationOccupancy(): Promise<LocationOccupancyItem[]> {
-  try {
-    return await apiGet<LocationOccupancyItem[]>(
+  return whenPermitted(
+    apiGet<LocationOccupancyItem[]>(
       "/physical-archive/locations/occupancy",
       { cache: "no-store" },
-    );
-  } catch {
-    return [];
-  }
+    ),
+    [],
+  );
 }

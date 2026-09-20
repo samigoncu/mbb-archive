@@ -27,9 +27,12 @@ internal sealed class EfArchiveRepository : IArchiveRecordRepository, IArchiveQu
         // olsun kullanıcının göremeyeceği kayıt sorgudan hiç çıkmaz.
         var query = _db.Records.AsNoTracking().Where(ArchiveRecordAccessFilter.For(scope));
 
-        if (documentId.HasValue)
+        // Desen eşleştirme, nullable açmayı sorgu ifadesinin dışına taşır:
+        // `.Value` sorgu içinde kaldığında güçlü tipli id karşılaştırmasıyla
+        // karışıyor ve mimari denetimi gereksiz yere uyarıyordu.
+        if (documentId is { } id)
         {
-            query = query.Where(x => x.DocumentId == documentId.Value);
+            query = query.Where(x => x.DocumentId == id);
         }
 
         if (!string.IsNullOrWhiteSpace(status))

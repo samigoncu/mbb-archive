@@ -5,6 +5,7 @@ using Mbb.Archive.BuildingBlocks.Presentation;
 using Mbb.Archive.Modules.Organization.Application.Directory;
 
 namespace Mbb.Archive.Modules.Organization.Presentation;
+
 internal static class DirectoryEndpoints
 {
     public static void MapDirectoryEndpoints(this IEndpointRouteBuilder endpoints)
@@ -24,6 +25,12 @@ internal static class DirectoryEndpoints
             // Kaydeden yönetici değişikliğin etkisini bir sonraki istekte görmeli.
             await runtime.RefreshAsync(ct);
             return Results.Ok(result.Value);
+        });
+
+        group.MapPost("/test-connection", async (TestLdapConnectionRequest? request, DirectorySettingsHandlers handler, CancellationToken ct) =>
+        {
+            var result = await handler.TestConnectionAsync(request, ct);
+            return result.IsFailure ? ApiResults.Problem(result.Error) : Results.Ok(new { message = result.Value });
         });
         group.MapGet("/history", async (IDirectoryAdministration service, CancellationToken ct) => Results.Ok(await service.HistoryAsync(ct)));
         group.MapPost("/sync-units", async (HttpContext http, IDirectoryAdministration service, CancellationToken ct) =>

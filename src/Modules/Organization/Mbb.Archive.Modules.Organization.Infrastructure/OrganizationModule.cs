@@ -5,6 +5,7 @@ using Mbb.Archive.BuildingBlocks.Application;
 using Mbb.Archive.Modules.Organization.Application;
 using Mbb.Archive.Modules.Organization.Application.Abstractions;
 using Mbb.Archive.Modules.Organization.Application.Units;
+using Mbb.Archive.Modules.Organization.Application.Directory;
 using Mbb.Archive.Modules.Organization.Infrastructure.Directory;
 using Mbb.Archive.Modules.Organization.Infrastructure.Persistence;
 
@@ -37,7 +38,13 @@ public static class OrganizationModule
         services.AddScoped<IUnitOfWork<OrganizationBoundary>>(
             sp => sp.GetRequiredService<OrganizationDbContext>());
 
-        services.AddScoped<IDirectoryClient, LdapDirectoryClient>();
+        services.AddScoped<LdapDirectoryClient>();
+        services.AddScoped<IDirectoryClient, DirectoryClientRouter>();
+        services.AddScoped<ILdapConnectionTester, LdapConnectionTester>();
+
+        services.AddHttpClient<IMalatyaApiClient, MalatyaApiClient>();
+        services.AddScoped<IMalatyaApiSettingsStore, EfMalatyaApiSettingsStore>();
+        services.AddScoped<MalatyaApiSettingsHandlers>();
 
         services.AddScoped<EfUnitPlanAssignments>();
         services.AddScoped<IUnitPlanAssignments>(sp => sp.GetRequiredService<EfUnitPlanAssignments>());

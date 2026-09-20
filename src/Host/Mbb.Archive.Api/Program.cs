@@ -233,6 +233,7 @@ builder.Services.Configure<ArchiveProtectionOptions>(builder.Configuration.GetSe
 builder.Services.AddScoped<ArchiveProtectionService>();
 builder.Services.AddHostedService<ArchiveProtectionWorker>();
 builder.Services.AddScoped<Mbb.Archive.Modules.Workflow.Application.IWorkflowAssignmentDirectory, WorkflowAssignmentDirectory>();
+builder.Services.AddScoped<Mbb.Archive.Modules.Operations.Application.Notifications.ISmsSender, MalatyaSmsSenderAdapter>();
 builder.Services.AddScoped<IAuditDisplayResolver, AuditDisplayResolver>();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Info, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Globe, Info, Network, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   saveDirectorySettingsAction,
+  testLdapConnectionAction,
   type DirectorySettings,
 } from "@/features/organization/api/directory-settings-actions";
 
@@ -29,6 +31,8 @@ export function DirectorySettingsPanel({ initial, canManage }: {
 }) {
   const [settings, setSettings] = useState(initial);
   const [pending, setPending] = useState(false);
+  const [testPending, setTestPending] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [error, setError] = useState("");
   const [password, setPassword] = useState("");
 
@@ -209,8 +213,79 @@ export function DirectorySettingsPanel({ initial, canManage }: {
       </p>
     )}
     {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
-    {canManage
-      ? <Button type="submit" className="self-start" disabled={pending}>{pending ? "Kaydediliyor…" : "Dizin ayarlarını kaydet"}</Button>
-      : <p className="text-sm">Dizin ayarlarını yalnız `organization.manage` yetkisi olan kullanıcı değiştirebilir.</p>}
+
+    {testResult && (
+      <div
+        className={`rounded-lg border p-4 text-xs leading-relaxed ${
+          testResult.success
+            ? "border-emerald-300 bg-emerald-50/70 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
+            : "border-destructive/30 bg-destructive/5 text-destructive"
+        }`}
+      >
+        <div className="flex items-center gap-2 font-semibold">
+          {testResult.success ? (
+            <>
+              <CheckCircle2 className="size-4" />
+              LDAP Bağlantısı Başarılı
+            </>
+          ) : (
+            <>
+              <TriangleAlert className="size-4" />
+              LDAP Bağlantı Hatası
+            </>
+          )}
+        </div>
+        <p className="mt-1">{testResult.message}</p>
+      </div>
+    )}
+
+    <div className="flex flex-wrap items-center gap-3">
+      {canManage && (
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={testPending}
+            onClick={async () => {
+              setTestPending(true);
+              setTestResult(null);
+              const res = await testLdapConnectionAction({
+                host: form.host,
+                port: form.port,
+                useSsl: form.useSsl,
+                bindDn: form.bindDn,
+                bindPassword: password.length > 0 ? password : null,
+                timeoutSeconds: form.timeoutSeconds,
+              });
+              setTestPending(false);
+              setTestResult(res);
+              if (res.success) {
+                toast.success(res.message);
+              } else {
+                toast.error(res.message);
+              }
+            }}
+          >
+            <Network className="mr-1.5 size-4" />
+            {testPending ? "Bağlanıyor…" : "Bağlantıyı Test Et"}
+          </Button>
+
+          <Button type="submit" disabled={pending}>
+            {pending ? "Kaydediliyor…" : "Dizin ayarlarını kaydet"}
+          </Button>
+
+          <Link
+            href="/tanimlamalar/api"
+            className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Globe className="size-3.5" />
+            Belediye API ayarlarına git →
+          </Link>
+        </>
+      )}
+      {!canManage && (
+        <p className="text-sm">Dizin ayarlarını yalnız `organization.manage` yetkisi olan kullanıcı değiştirebilir.</p>
+      )}
+    </div>
   </form>;
 }

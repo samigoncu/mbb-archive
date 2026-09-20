@@ -42,9 +42,10 @@ public sealed class DirectorySettings
     public string UpdatedBy { get; private set; } = "system";
     public DateTimeOffset? UpdatedAt { get; private set; }
 
-    public bool IsConfigured => IsEnabled
-        && !string.IsNullOrWhiteSpace(Host)
+    public bool HasValidConfiguration => !string.IsNullOrWhiteSpace(Host)
         && !string.IsNullOrWhiteSpace(UserSearchBase);
+
+    public bool IsConfigured => IsEnabled && HasValidConfiguration;
 
     /// <param name="bindPasswordCipher">
     /// null verilirse mevcut parola korunur; boş dizi parolayı siler. Panelde
@@ -84,6 +85,17 @@ public sealed class DirectorySettings
         MailAttribute = Fallback(mailAttribute, "mail");
         TimeoutSeconds = timeoutSeconds;
         ProvisionOnLogin = provisionOnLogin;
+        IsEnabled = isEnabled;
+        UpdatedBy = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
+        UpdatedAt = now;
+        Version++;
+    }
+
+    public void SetEnabled(bool isEnabled, string actor, DateTimeOffset now)
+    {
+        if (isEnabled && !HasValidConfiguration)
+            throw new DomainRuleViolationException("Dizin sunucu adresi ve arama tabanı yapılandırılmadan etkinleştirilemez.");
+
         IsEnabled = isEnabled;
         UpdatedBy = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
         UpdatedAt = now;

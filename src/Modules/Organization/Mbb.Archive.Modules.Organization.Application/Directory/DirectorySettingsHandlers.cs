@@ -74,9 +74,24 @@ public sealed record SaveDirectorySettings(
     string UnitAttribute, string GroupAttribute, string DisplayNameAttribute, string MailAttribute,
     int TimeoutSeconds, bool ProvisionOnLogin, long ExpectedVersion);
 
+public interface ILdapConnectionTester
+{
+    Task<Result<string>> TestConnectionAsync(string host, int port, bool useSsl, string bindDn, string password, int timeoutSeconds, CancellationToken ct);
+}
+
+public sealed record TestLdapConnectionRequest(
+    string? Host,
+    int? Port,
+    bool? UseSsl,
+    string? BindDn,
+    string? BindPassword,
+    int? TimeoutSeconds);
+
 public sealed class DirectorySettingsHandlers(
     IDirectorySettingsStore store,
+    IMalatyaApiSettingsStore malatyaStore,
     IDirectorySecretProtector protector,
+    ILdapConnectionTester connectionTester,
     IUnitOfWork<OrganizationBoundary> uow,
     ICurrentUserPermissions user,
     TimeProvider time)
@@ -85,6 +100,32 @@ public sealed class DirectorySettingsHandlers(
     {
         var settings = await store.GetAsync(ct);
         return View(settings, protector.Unprotect(settings.BindPasswordCipher).IsUnreadable);
+    }
+
+    public async Task<Result<string>> TestConnectionAsync(TestLdapConnectionRequest? request, CancellationToken ct)
+    {
+        var settings = await store.GetAsync(ct);
+        var host = !string.IsNullOrWhiteSpace(request?.Host) ? request.Host : settings.Host;
+        var port = request?.Port ?? settings.Port;
+        var useSsl = request?.UseSsl ?? settings.UseSsl;
+        var bindDn = request?.BindDn ?? settings.BindDn;
+        var timeout = request?.TimeoutSeconds ?? settings.TimeoutSeconds;
+
+        string? password = null;
+        if (!string.IsNullOrEmpty(request?.BindPassword))
+        {
+            password = request.BindPassword;
+        }
+        else if (!string.IsNullOrEmpty(settings.BindPasswordCipher))
+        {
+            var unprotected = protector.Unprotect(settings.BindPasswordCipher);
+            if (!unprotected.IsUnreadable) password = unprotected.Value;
+        }
+
+        if (string.IsNullOrWhiteSpace(host))
+            return Result<string>.Failure(Error.Validation("organization.ldap_host_required", "LDAP sunucu adresi zorunludur."));
+
+        return await connectionTester.TestConnectionAsync(host, port, useSsl, bindDn, password ?? "", timeout, ct);
     }
 
     public async Task<Result<DirectorySettingsView>> SaveAsync(SaveDirectorySettings request, CancellationToken ct)
@@ -103,6 +144,15 @@ public sealed class DirectorySettingsHandlers(
                 request.UnitAttribute, request.GroupAttribute, request.DisplayNameAttribute, request.MailAttribute,
                 request.TimeoutSeconds, request.ProvisionOnLogin, request.IsEnabled,
                 user.Subject, time.GetUtcNow());
+
+            if (request.IsEnabled)
+            {
+                var malatya = await malatyaStore.GetAsync(ct);
+                if (malatya.IsDirectorySyncEnabled)
+                {
+                    malatya.SetDirectorySyncEnabled(false, user.Subject, time.GetUtcNow());
+                }
+            }
         }
         catch (DomainRuleViolationException exception)
         {

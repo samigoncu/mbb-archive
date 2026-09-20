@@ -1,4 +1,5 @@
 import { apiGet } from "@/lib/api/api-client";
+import { whenPermitted } from "@/lib/api/when-permitted";
 import type { PagedResult } from "@/features/documents/model/document";
 import type {
   EvidenceCapabilities,
@@ -25,11 +26,8 @@ export async function getEvidenceValidations(
 }
 
 export async function getEvidenceCapabilities(): Promise<EvidenceCapabilities | null> {
-  try {
-    return await apiGet<EvidenceCapabilities>("/evidence/capabilities", {
-      cache: "no-store",
-    });
-  } catch {
-    return null;
-  }
+  return whenPermitted(
+    apiGet<EvidenceCapabilities>("/evidence/capabilities", { cache: "no-store" }),
+    null,
+  );
 }

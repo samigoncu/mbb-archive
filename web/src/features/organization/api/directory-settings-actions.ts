@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { apiGet, apiPut } from "@/lib/api/api-client";
+import { apiGet, apiPost, apiPut } from "@/lib/api/api-client";
 
 export type DirectorySettings = {
   isEnabled: boolean;
@@ -53,9 +53,30 @@ export async function saveDirectorySettingsAction(
   try {
     const data = await apiPut<SaveDirectorySettings, DirectorySettings>("/organization/directory/settings", input);
     revalidatePath("/tanimlamalar/ldap");
+    revalidatePath("/tanimlamalar/api");
     revalidatePath("/tanimlamalar/birimler");
     return { data };
   } catch (error) {
     return { error: message(error, "Dizin ayarları kaydedilemedi.") };
+  }
+}
+
+export type TestLdapInput = {
+  host?: string;
+  port?: number;
+  useSsl?: boolean;
+  bindDn?: string;
+  bindPassword?: string | null;
+  timeoutSeconds?: number;
+};
+
+export async function testLdapConnectionAction(
+  input?: TestLdapInput,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await apiPost<TestLdapInput | undefined, { message: string }>("/organization/directory/test-connection", input);
+    return { success: true, message: res.message ?? "LDAP bağlantısı başarılı." };
+  } catch (error) {
+    return { success: false, message: message(error, "LDAP bağlantısı kurulamadı.") };
   }
 }

@@ -78,6 +78,43 @@ def get_module_name(project: Path) -> str | None:
 
     return parts[module_index + 1] if len(parts) > module_index + 1 else None
 
+# Aşırı uzun satırların taban çizgisi.
+#
+# Depoda iki farklı yazım alışkanlığı birikmiş: bir bölüm özenle açılmış,
+# bir bölüm tek satıra sıkıştırılmış. Mevcut borcu tek seferde kapatmak
+# devasa bir diff üretir ve davranış değiştirme riski taşır; onun yerine
+# borç dondurulur. Yeni kod bu sayıyı artıramaz, azaltabilir.
+#
+# Sayı düştükçe bu sabit de düşürülmelidir.
+LONG_LINE_LIMIT = 200
+LONG_LINE_BASELINE = 230
+
+def check_long_lines() -> None:
+    offenders = 0
+
+    for file in ROOT.rglob("*.cs"):
+        normalized = relative(file)
+
+        if "/obj/" in f"/{normalized}" or "/bin/" in f"/{normalized}":
+            continue
+        if "/Migrations/" in f"/{normalized}":
+            continue
+
+        for line in file.read_text(encoding="utf-8").splitlines():
+            if len(line) > LONG_LINE_LIMIT:
+                offenders += 1
+
+    if offenders > LONG_LINE_BASELINE:
+        fail(
+            f"{offenders} satır {LONG_LINE_LIMIT} karakteri aşıyor; taban çizgisi "
+            f"{LONG_LINE_BASELINE}. Yeni kod uzun satır eklememelidir."
+        )
+    elif offenders < LONG_LINE_BASELINE:
+        print(
+            f"note: uzun satır sayısı {offenders}; "
+            f"LONG_LINE_BASELINE değerini {offenders} yapın."
+        )
+
 def check_value_object_predicates() -> None:
     for file in ROOT.rglob("*.cs"):
         normalized = relative(file)
@@ -160,6 +197,7 @@ def check_solution() -> None:
 
 def main() -> int:
     check_csharp_files()
+    check_long_lines()
     check_value_object_predicates()
     check_project_references()
     check_solution()
@@ -173,6 +211,7 @@ def main() -> int:
     print("Architecture verification PASSED.")
     print("Checked:")
     print("  - C# file size guard")
+    print("  - long line baseline")
     print("  - Domain forbidden dependencies")
     print("  - blocking async usage")
     print("  - strongly-typed id query predicates")
