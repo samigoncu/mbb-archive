@@ -73,3 +73,28 @@ it("aktarımı belge bağlantısıyla saklar ve OCR sonucunu ayrı takip ettirir
   expect(screen.getByRole("link", { name: "OCR ve işlem takibi" }).getAttribute("href")).toBe("/islem-takibi");
   expect(screen.queryByRole("list", { name: "Aktarım dosyaları" })).toBeNull();
 });
+
+it("PDF içeriğinde Konu satırı tespit edildiğinde evrak konusuna otomatik yazar", async () => {
+  const content = `%PDF-1.4\nKONU: Kamulaştırma Bedel Tespiti Talebi\n`;
+  const file = new File([content], "scan_0001.pdf", { type: "application/pdf" });
+  const view = render(<ScanIndexingStudio units={[unit()]} initialContext={context()} metadataSchemas={[]} />);
+  fireEvent.change(view.container.querySelector('input[type="file"]')!, { target: { files: [file] } });
+
+  await waitFor(() => {
+    const textarea = view.container.querySelector("#scan-subject") as HTMLTextAreaElement;
+    expect(textarea.value).toBe("Kamulaştırma Bedel Tespiti Talebi");
+  });
+});
+
+it("hızlı başlık şablon çipine tıklandığında evrak konusunu günceller", async () => {
+  const file = new File(["dummy"], "scan_0002.pdf", { type: "application/pdf" });
+  const view = render(<ScanIndexingStudio units={[unit()]} initialContext={context()} metadataSchemas={[]} />);
+  fireEvent.change(view.container.querySelector('input[type="file"]')!, { target: { files: [file] } });
+
+  const chipButton = screen.getByRole("button", { name: "+ Meclis Kararı" });
+  fireEvent.click(chipButton);
+
+  const textarea = view.container.querySelector("#scan-subject") as HTMLTextAreaElement;
+  expect(textarea.value).toBe("Meclis Kararı");
+});
+

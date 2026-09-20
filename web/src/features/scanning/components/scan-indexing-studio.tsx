@@ -16,6 +16,7 @@ import {
   Camera,
   Eye,
   Gavel,
+  Sparkles,
   Upload,
   X,
 } from "lucide-react";
@@ -33,6 +34,11 @@ import {
   buildMetadataPayload,
   multiChoiceSeparator,
 } from "@/features/scanning/model/metadata-payload";
+import {
+  suggestDocumentSubject,
+  buildSubjectChips,
+  isGenericScannerFilename,
+} from "../model/scan-subject-suggester";
 
 const documentStatusLabels: Record<string, string> = {
   Draft: "Taslak",
@@ -102,6 +108,29 @@ export function ScanIndexingStudio({
   const selectedPage = pages[selectedIndex] ?? pages[0];
   const distinctGroups = Array.from(new Set(pages.map((p) => p.documentGroup ?? 1)));
 
+  const subjectChips = buildSubjectChips({
+    classificationTitle: classification?.title,
+    dossierTitle: dossier?.title,
+  });
+
+  async function triggerSubjectSuggestion() {
+    const fileToInspect = selectedPage?.file ?? pages[0]?.file;
+    const res = await suggestDocumentSubject({
+      file: fileToInspect,
+      classificationTitle: classification?.title,
+      dossierTitle: dossier?.title,
+      unitName: units.find((u) => u.id === ownerUnitId)?.name,
+    });
+    setSubject(res.subject);
+    if (res.source === "content") {
+      toast.success(`Belge içeriğinden tespit edildi: "${res.subject}"`);
+    } else if (res.source === "classification") {
+      toast.success(`SDP konusuna göre önerildi: "${res.subject}"`);
+    } else {
+      toast.success(`Önerilen başlık uygulandı: "${res.subject}"`);
+    }
+  }
+
   function recalculateGroups(list: ScannedPage[]): ScannedPage[] {
     let currentGroup = 1;
     return list.map((page, index) => {
@@ -138,12 +167,31 @@ export function ScanIndexingStudio({
       return next;
     });
 
-    // Konu boşsa ilk dosyanın adı başlangıç değeri olur; kullanıcı düzenleyebilir.
+    // Senkron başlangıç değeri (anında submit ve UI tutarlılığı için)
+    const rawName = incoming[0].name.replace(/\.[^/.]+$/, "");
+    const initialSyncSubject = isGenericScannerFilename(incoming[0].name)
+      ? (classification?.title
+          ? `${classification.title} Evrakı`
+          : (dossier?.title ? `${dossier.title} Üst Yazısı` : rawName))
+      : rawName;
+
     setSubject((current) =>
-      current.trim().length > 0
-        ? current
-        : incoming[0].name.replace(/\.[^/.]+$/, ""),
+      current.trim().length > 0 ? current : initialSyncSubject,
     );
+
+    // Asenkron analiz: PDF gömülü metninden Konu:, Karar No, Dilekçe tespiti
+    const firstFile = incoming[0];
+    void suggestDocumentSubject({
+      file: firstFile,
+      classificationTitle: classification?.title,
+      dossierTitle: dossier?.title,
+      unitName: units.find((u) => u.id === ownerUnitId)?.name,
+    }).then((suggestion) => {
+      if (suggestion.source === "content") {
+        setSubject(suggestion.subject);
+        toast.info(`Belge içeriğinden konu tespit edildi: "${suggestion.subject}"`);
+      }
+    });
   }
 
   function toggleSeparator(index: number) {
@@ -395,7 +443,49 @@ export function ScanIndexingStudio({
           <div className="shrink-0 border-b border-border px-3 py-2.5"><h2 className="text-sm font-semibold">Arşiv ve indeks bilgileri</h2></div>
           <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain">
           <fieldset disabled={isSubmitting} className="min-w-0 space-y-3 p-3 text-sm">
-            <div className="space-y-1.5"><label htmlFor="scan-subject" className="font-medium">Evrak konusu <span className="text-destructive" aria-hidden>*</span></label><textarea id="scan-subject" placeholder="Belgeyi tanımlayan kısa ve anlaşılır bir başlık" rows={2} value={subject} onChange={event => setSubject(event.target.value)} required className="block w-full resize-y rounded-lg border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="scan-subject" className="font-medium">
+                  Evrak konusu <span className="text-destructive" aria-hidden>*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={triggerSubjectSuggestion}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                  title="Seçili dosya ve SDP bağlamına göre başlık öner"
+                >
+                  <Sparkles className="size-3 text-amber-500" aria-hidden />
+                  Başlık Öner
+                </button>
+              </div>
+              <textarea
+                id="scan-subject"
+                placeholder="Belgeyi tanımlayan kısa ve anlaşılır bir başlık"
+                rows={2}
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
+                required
+                className="block w-full resize-y rounded-lg border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <div className="space-y-1 pt-0.5">
+                <div className="flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground">
+                  <Sparkles className="size-3 text-amber-500" aria-hidden />
+                  <span>Hızlı Başlık Şablonları:</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {subjectChips.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setSubject(chip)}
+                      className="rounded-md border border-border/80 bg-muted/40 px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
             <ScanFilingFields units={units} scope={scope} disabled={isSubmitting} onUnitChange={id => { setMetadataSchemaId(""); setMetadataValues({}); void scope.changeUnit(id); }} />
           {metadataSchemas.length > 0 && (
             <div className="flex flex-col gap-2 border-t border-border pt-3">
