@@ -53,15 +53,48 @@ describe("scan-subject-suggester", () => {
       );
     });
 
-    it("detects water and utility bills (MASKİ, elektrik vb.)", () => {
+    it("detects GSM, mobile phone and operator payments (e.g. avea kasım ödemesi, turkcell)", () => {
+      expect(detectSemanticSubjectFromKeywords("avea kasım ödemesi.pdf")).toBe(
+        `${currentYear} Yılı Kasım Ayı GSM / Telefon Hizmet Faturası ve Ödeme Makbuzu`,
+      );
+      expect(detectSemanticSubjectFromKeywords("turkcell_fatura_ekim_2025.pdf")).toBe(
+        "2025 Yılı Ekim Ayı GSM / Telefon Hizmet Faturası",
+      );
+      expect(detectSemanticSubjectFromKeywords("vodafone_hat_odemesi.pdf")).toBe(
+        `${currentYear} Yılı GSM / Telefon Hizmet Faturası ve Ödeme Makbuzu`,
+      );
+    });
+
+    it("detects water, electricity and gas bills with payment distinction", () => {
       expect(detectSemanticSubjectFromKeywords("maski_su_ekim.pdf")).toBe(
         `${currentYear} Yılı Ekim Ayı Su ve Kanalizasyon Hizmet Faturası`,
+      );
+      expect(detectSemanticSubjectFromKeywords("su_odemesi_eylul.pdf")).toBe(
+        `${currentYear} Yılı Eylül Ayı Su ve Kanalizasyon Hizmet Faturası ve Ödeme Makbuzu`,
       );
       expect(detectSemanticSubjectFromKeywords("tedas_elektrik_eylul_2025.pdf")).toBe(
         "2025 Yılı Eylül Ayı Elektrik Tesis Abonelik Faturası",
       );
+      expect(detectSemanticSubjectFromKeywords("tedas_kasim_odemesi.pdf")).toBe(
+        `${currentYear} Yılı Kasım Ayı Elektrik Tesis Faturası ve Ödeme Makbuzu`,
+      );
       expect(detectSemanticSubjectFromKeywords("aksa_dogalgaz_mart.pdf")).toBe(
         `${currentYear} Yılı Mart Ayı Doğalgaz Tesis Abonelik Faturası`,
+      );
+    });
+
+    it("detects fuel, vehicle, SGK and municipal service operations", () => {
+      expect(detectSemanticSubjectFromKeywords("mazot_ekim.pdf")).toBe(
+        `${currentYear} Yılı Ekim Ayı Hizmet Araçları Akaryakıt ve Yakıt Tüketim Faturası`,
+      );
+      expect(detectSemanticSubjectFromKeywords("sgk_kasim_odemesi.pdf")).toBe(
+        `${currentYear} Yılı Kasım Ayı Vergi / SGK Prim Tahakkuk ve Ödeme Dekontu`,
+      );
+      expect(detectSemanticSubjectFromKeywords("temizlik_hakedis_ekim.pdf")).toBe(
+        `${currentYear} Yılı Ekim Ayı Temizlik Hizmet Alımı Hakediş Dosyası`,
+      );
+      expect(detectSemanticSubjectFromKeywords("kasko_sigorta_2025.pdf")).toBe(
+        "2025 Yılı Hizmet Araçları Sigorta ve Kasko Poliçesi",
       );
     });
 

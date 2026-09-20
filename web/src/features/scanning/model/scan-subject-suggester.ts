@@ -107,44 +107,110 @@ export function detectSemanticSubjectFromKeywords(
     period = `${detectedYear} Yılı`;
   }
 
-  // 1. Telekom & İnternet & ADSL
-  if (/adsl|fiber|ttnet|telekom|turkcell|vodafone|superonline/i.test(cleanBase)) {
-    return period
-      ? `${period} ADSL / İnternet Hizmet Faturası`
-      : "ADSL / İnternet Hizmet Faturası";
+  // Ödeme / Makbuz / Dekont eki tespiti
+  const isPayment = /odeme|ödeme|makbuz|dekont|tahsilat|fisi|fişi/i.test(cleanBase);
+
+  // 1. Mobil & GSM & Telefon (Avea, Turkcell, Vodafone, Telekom vb.)
+  if (/avea|turkcell|vodafone|gsm|mobil\s*hat|telefon\b|santral\b|cep\s*fatura|telsiz/i.test(cleanBase)) {
+    const docType = isPayment ? "GSM / Telefon Hizmet Faturası ve Ödeme Makbuzu" : "GSM / Telefon Hizmet Faturası";
+    return period ? `${period} ${docType}` : docType;
   }
 
-  // 2. Su ve Kanalizasyon (MASKİ)
+  // 2. Telekom & İnternet & ADSL & Fiber
+  if (/adsl|fiber|ttnet|superonline|turknet|uydunet|internet/i.test(cleanBase)) {
+    const docType = isPayment ? "ADSL / İnternet Hizmet Faturası ve Ödeme Makbuzu" : "ADSL / İnternet Hizmet Faturası";
+    return period ? `${period} ${docType}` : docType;
+  }
+
+  // 3. Genel Telekomünikasyon
+  if (/telekom/i.test(cleanBase)) {
+    const docType = isPayment ? "Telekomünikasyon Hizmet Faturası ve Ödeme Makbuzu" : "Telekomünikasyon Hizmet Faturası";
+    return period ? `${period} ${docType}` : docType;
+  }
+
+  // 4. Su ve Kanalizasyon (MASKİ / İSKİ vb.)
   if (
-    /maski|su\s*fatura|su\s*abone/i.test(cleanBase) ||
-    (/\bsu\b/i.test(cleanBase) && (detectedMonth || /fatura/i.test(cleanBase)))
+    /maski|iski|aski|kaski|deski|su\s*fatura|su\s*abone|su\s*makbuz|su\s*tuketim|su\s*tüketim/i.test(cleanBase) ||
+    (/\bsu\b/i.test(cleanBase) && (detectedMonth || /fatura|odeme|ödeme|abone|makbuz/i.test(cleanBase)))
   ) {
-    return period
-      ? `${period} Su ve Kanalizasyon Hizmet Faturası`
-      : "Su ve Kanalizasyon Hizmet Faturası";
+    const docType = isPayment ? "Su ve Kanalizasyon Hizmet Faturası ve Ödeme Makbuzu" : "Su ve Kanalizasyon Hizmet Faturası";
+    return period ? `${period} ${docType}` : docType;
   }
 
-  // 3. Elektrik / Doğalgaz
-  if (/elektrik|tedas|gediz|aksa\s*elektrik/i.test(cleanBase)) {
-    return period
-      ? `${period} Elektrik Tesis Abonelik Faturası`
-      : "Elektrik Tesis Abonelik Faturası";
+  // 5. Elektrik / Aydınlatma / TEDAŞ
+  if (/elektrik|tedas|tedaş|gediz|enerjisa|toroslar|aydem|aksa\s*elektrik|sayac|sayaç|trafo|aydinlatma|aydınlatma/i.test(cleanBase)) {
+    const docType = isPayment ? "Elektrik Tesis Faturası ve Ödeme Makbuzu" : "Elektrik Tesis Abonelik Faturası";
+    return period ? `${period} ${docType}` : docType;
   }
 
-  if (/dogalgaz|doğalgaz|aksa\s*gaz/i.test(cleanBase)) {
-    return period
-      ? `${period} Doğalgaz Tesis Abonelik Faturası`
-      : "Doğalgaz Tesis Abonelik Faturası";
+  // 6. Doğalgaz / Isınma
+  if (/dogalgaz|doğalgaz|aksa\s*gaz|igdas|i̇gdaş|baskentgaz|başkentgaz|isinma|ısınma|kalorifer|kombi|lng|cng/i.test(cleanBase)) {
+    const docType = isPayment ? "Doğalgaz Tesis Faturası ve Ödeme Makbuzu" : "Doğalgaz Tesis Abonelik Faturası";
+    return period ? `${period} ${docType}` : docType;
   }
 
-  // 4. Personel & Maaş & Bordro
-  if (/bordro|maas|maaş|puantaj/i.test(cleanBase)) {
+  // 7. Akaryakıt / Yakıt / Mazot / Taşıt Tanıma (Hizmet Araçları)
+  if (/akaryakit|akaryakıt|benzin|mazot|motorin|yakit|yakıt|petrol\s*ofisi|opet|shell|tasit\s*tanima|taşıt\s*tanıma|tts/i.test(cleanBase)) {
+    const docType = isPayment ? "Hizmet Araçları Akaryakıt Alım Faturası ve Ödeme Makbuzu" : "Hizmet Araçları Akaryakıt ve Yakıt Tüketim Faturası";
+    return period ? `${period} ${docType}` : docType;
+  }
+
+  // 8. Personel & Maaş & Bordro & Puantaj
+  if (/bordro|maas|maaş|puantaj|ozluk|özlük/i.test(cleanBase)) {
     return period
       ? `${period} Personel Maaş Bordrosu`
       : "Personel Maaş Bordrosu";
   }
 
-  // 5. Kararlar (Meclis / Encümen)
+  // 9. SGK & Prim & Vergi & Harç & Muhasebe Dekontları
+  if (/sgk|prim|muhtasar|kdv|vergi|harc\b|harç\b/i.test(cleanBase)) {
+    const docType = isPayment ? "Vergi / SGK Prim Tahakkuk ve Ödeme Dekontu" : "Vergi / SGK Prim ve Tahakkuk Belgesi";
+    return period ? `${period} ${docType}` : docType;
+  }
+
+  // 10. Banka Dekontu / EFT / Havale
+  if (/dekont|havale|eft|pos\s*rapor|tahsilat|hesap\s*ekstre/i.test(cleanBase)) {
+    const docType = "Banka İşlem Dekontu ve Tahsilat Makbuzu";
+    return period ? `${period} ${docType}` : docType;
+  }
+
+  // 11. Araç Bakım / Muayene / Sigorta / Kasko
+  if (/kasko|trafik\s*sigorta|sigorta\s*polic|muayene|tuvturk|tüvtürk|oto\s*bakim|oto\s*tamir|yedek\s*parca|lastik/i.test(cleanBase)) {
+    if (/muayene|tuvturk|tüvtürk/i.test(cleanBase)) {
+      return period ? `${period} Hizmet Araçları Muayene ve Harç Belgesi` : "Hizmet Araçları Muayene ve Harç Belgesi";
+    }
+    if (/kasko|sigorta/i.test(cleanBase)) {
+      return period ? `${period} Hizmet Araçları Sigorta ve Kasko Poliçesi` : "Hizmet Araçları Sigorta ve Kasko Poliçesi";
+    }
+    return period ? `${period} Hizmet Araçları Bakım Onarım ve Yedek Parça Faturası` : "Hizmet Araçları Bakım Onarım ve Yedek Parça Faturası";
+  }
+
+  // 12. Bilgi İşlem / Yazılım / Lisans / Donanım
+  if (/lisans|server|sunucu|domain|hosting|ssl|toner|kartus|kartuş|donanim|donanım|yazilim|yazılım/i.test(cleanBase)) {
+    if (/toner|kartus|kartuş/i.test(cleanBase)) {
+      return period ? `${period} Yazıcı ve Toner Sarf Malzemesi Alım Faturası` : "Yazıcı ve Toner Sarf Malzemesi Alım Faturası";
+    }
+    if (/lisans|yazilim|yazılım/i.test(cleanBase)) {
+      return period ? `${period} Yazılım ve Sistem Lisans Faturası` : "Yazılım ve Sistem Lisans Faturası";
+    }
+    return period ? `${period} Bilişim Donanım ve Sistem Alım Faturası` : "Bilişim Donanım ve Sistem Alım Faturası";
+  }
+
+  // 13. Hakediş & Hizmet Alımı (Temizlik, Yemek, Güvenlik vb.)
+  if (/hakedis|hakediş/i.test(cleanBase)) {
+    if (/temizlik/i.test(cleanBase)) {
+      return period ? `${period} Temizlik Hizmet Alımı Hakediş Dosyası` : "Temizlik Hizmet Alımı Hakediş Dosyası";
+    }
+    if (/yemek/i.test(cleanBase)) {
+      return period ? `${period} Yemek Hizmet Alımı Hakediş Dosyası` : "Yemek Hizmet Alımı Hakediş Dosyası";
+    }
+    if (/guvenlik|güvenlik/i.test(cleanBase)) {
+      return period ? `${period} Özel Güvenlik Hizmet Alımı Hakediş Dosyası` : "Özel Güvenlik Hizmet Alımı Hakediş Dosyası";
+    }
+    return period ? `${period} Hizmet Alımı Hakediş ve Ödeme Dosyası` : "Hizmet Alımı Hakediş ve Ödeme Dosyası";
+  }
+
+  // 14. Kararlar (Meclis / Encümen)
   if (/meclis/i.test(cleanBase)) {
     const noMatch = cleanBase.match(/\b(\d{1,5})\b/);
     const yrPrefix = detectedYear ? `${detectedYear} Yılı ` : "";
@@ -161,7 +227,7 @@ export function detectSemanticSubjectFromKeywords(
       : `${yrPrefix}Belediye Encümen Kararı`;
   }
 
-  // 6. İmar / Yapı Ruhsatı / İskan
+  // 15. İmar / Yapı Ruhsatı / İskan
   if (/ruhsat|iskan|iskân/i.test(cleanBase)) {
     return detectedYear
       ? `${detectedYear} Yılı Yapı Ruhsatı ve İskan Belgesi`
@@ -172,6 +238,12 @@ export function detectSemanticSubjectFromKeywords(
     return detectedYear
       ? `${detectedYear} Yılı Kamulaştırma Karar ve Tespit Dosyası`
       : "Kamulaştırma Karar ve Tespit Dosyası";
+  }
+
+  // 16. Genel Ödeme / Fatura / Makbuz (Belirli kategori eşleşmediyse ama ödeme/fatura kelimesi varsa)
+  if (isPayment || /fatura|makbuz/i.test(cleanBase)) {
+    const docType = isPayment ? "Gider ve Ödeme Makbuzu" : "Hizmet ve Mal Alım Faturası";
+    return period ? `${period} ${docType}` : docType;
   }
 
   return null;
@@ -311,12 +383,19 @@ export async function inspectFileTextForSubject(file: File): Promise<string | nu
       }
     }
 
-    const subjectMatch = text.match(/\/Subject\s*\(([^)]+)\)/i);
-    if (subjectMatch && subjectMatch[1]) {
-      const extractedSubject = cleanExtractedString(subjectMatch[1]);
-      if (extractedSubject && extractedSubject.length >= 4) {
-        return extractedSubject;
-      }
+    // 4. Kurumsal Fatura / Makbuz İçerik Tespiti (Örn: Generic taranmış scan_0001.pdf içindeki faturalar)
+    const yr = extractYearFromText(text) ?? new Date().getFullYear();
+    if (/AVEA|TURKCELL|VODAFONE|TÜRK\s*TELEKOM|TURK\s*TELEKOM/i.test(text) && /FATURA|ABONE/i.test(text)) {
+      return `${yr} Yılı Telefon / GSM Hizmet Faturası`;
+    }
+    if (/MASK[İI]|SU\s+VE\s+KANAL[İI]ZASYON|SU\s+FATURA/i.test(text)) {
+      return `${yr} Yılı Su ve Kanalizasyon Hizmet Faturası`;
+    }
+    if (/TEDA[ŞS]|ELEKTR[İI]K\s+FATURA|ENERJ[İI]SA|TOROSLAR|GED[İI]Z/i.test(text)) {
+      return `${yr} Yılı Elektrik Tüketim Faturası`;
+    }
+    if (/DO[ĞG]ALGAZ|AKSA\s*GAZ|[İI]GDA[ŞS]|BA[ŞS]KENTGAZ/i.test(text)) {
+      return `${yr} Yılı Doğalgaz Tüketim Faturası`;
     }
 
     return null;
