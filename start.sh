@@ -6,6 +6,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+if [[ ! -f .env && -f .env.example ]]; then
+  echo "==> .env bulunamadı, .env.example üzerinden oluşturuluyor…"
+  cp .env.example .env
+fi
+
+if [[ ! -f web/.env && -f web/.env.example ]]; then
+  echo "==> web/.env bulunamadı, web/.env.example üzerinden oluşturuluyor…"
+  cp web/.env.example web/.env
+fi
+
 LOGS="$ROOT/.local-data/logs"
 mkdir -p "$LOGS" "$ROOT/.local-data/staging" "$ROOT/.local-data/originals" "$ROOT/.local-data/artifacts" "$ROOT/.local-data/keys"
 

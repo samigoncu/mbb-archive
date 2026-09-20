@@ -5,6 +5,20 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 set "ROOT=%CD%"
 
+if not exist ".env" (
+  if exist ".env.example" (
+    echo ==^> .env bulunamadi, .env.example kopyalaniyor...
+    copy ".env.example" ".env" >nul
+  )
+)
+
+if not exist "web\.env" (
+  if exist "web\.env.example" (
+    echo ==^> web\.env bulunamadi, web\.env.example kopyalaniyor...
+    copy "web\.env.example" "web\.env" >nul
+  )
+)
+
 if not exist ".local-data\logs" mkdir ".local-data\logs"
 if not exist ".local-data\staging" mkdir ".local-data\staging"
 if not exist ".local-data\originals" mkdir ".local-data\originals"
