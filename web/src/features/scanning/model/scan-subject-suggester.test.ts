@@ -36,42 +36,47 @@ describe("scan-subject-suggester", () => {
   });
 
   describe("detectSemanticSubjectFromKeywords", () => {
-    it("detects ADSL/Internet bills with month (e.g. ADSL ekim)", () => {
+    const currentYear = new Date().getFullYear();
+
+    it("detects ADSL/Internet bills with month and year (e.g. ADSL ekim, adsl 2025 ekim)", () => {
       expect(detectSemanticSubjectFromKeywords("ADSL ekim.pdf")).toBe(
-        "Ekim Ayı ADSL / İnternet Hizmet Faturası",
+        `${currentYear} Yılı Ekim Ayı ADSL / İnternet Hizmet Faturası`,
       );
-      expect(detectSemanticSubjectFromKeywords("fiber_internet_kasim.pdf")).toBe(
-        "Kasım Ayı ADSL / İnternet Hizmet Faturası",
+      expect(detectSemanticSubjectFromKeywords("ADSL ekim 2025.pdf")).toBe(
+        "2025 Yılı Ekim Ayı ADSL / İnternet Hizmet Faturası",
+      );
+      expect(detectSemanticSubjectFromKeywords("fiber_internet_kasim_24.pdf")).toBe(
+        "2024 Yılı Kasım Ayı ADSL / İnternet Hizmet Faturası",
       );
       expect(detectSemanticSubjectFromKeywords("ttnet_fatura.pdf")).toBe(
-        "ADSL / İnternet Hizmet Faturası",
+        `${currentYear} Yılı ADSL / İnternet Hizmet Faturası`,
       );
     });
 
     it("detects water and utility bills (MASKİ, elektrik vb.)", () => {
       expect(detectSemanticSubjectFromKeywords("maski_su_ekim.pdf")).toBe(
-        "Ekim Ayı Su ve Kanalizasyon Hizmet Faturası",
+        `${currentYear} Yılı Ekim Ayı Su ve Kanalizasyon Hizmet Faturası`,
       );
-      expect(detectSemanticSubjectFromKeywords("tedas_elektrik_eylul.pdf")).toBe(
-        "Eylül Ayı Elektrik Tesis Abonelik Faturası",
+      expect(detectSemanticSubjectFromKeywords("tedas_elektrik_eylul_2025.pdf")).toBe(
+        "2025 Yılı Eylül Ayı Elektrik Tesis Abonelik Faturası",
       );
       expect(detectSemanticSubjectFromKeywords("aksa_dogalgaz_mart.pdf")).toBe(
-        "Mart Ayı Doğalgaz Tesis Abonelik Faturası",
+        `${currentYear} Yılı Mart Ayı Doğalgaz Tesis Abonelik Faturası`,
       );
     });
 
     it("detects payroll and HR documents with month", () => {
       expect(detectSemanticSubjectFromKeywords("maas_bordro_ekim.pdf")).toBe(
-        "Ekim Ayı Personel Maaş Bordrosu",
+        `${currentYear} Yılı Ekim Ayı Personel Maaş Bordrosu`,
       );
     });
 
     it("detects municipal decisions and permits", () => {
       expect(detectSemanticSubjectFromKeywords("meclis_karari_152.pdf")).toBe(
-        "Belediye Meclis Kararı (No: 152)",
+        `${currentYear} Yılı Belediye Meclis Kararı (No: 152)`,
       );
       expect(detectSemanticSubjectFromKeywords("yapi_ruhsat_belgesi.pdf")).toBe(
-        "Yapı Ruhsatı ve İskan Belgesi",
+        `${currentYear} Yılı Yapı Ruhsatı ve İskan Belgesi`,
       );
     });
   });
@@ -175,12 +180,13 @@ describe("scan-subject-suggester", () => {
 
   describe("suggestDocumentSubject", () => {
     it("detects semantic keywords like 'ADSL ekim' and suggests proper title and filename", async () => {
+      const currentYear = new Date().getFullYear();
       const file = new File(["dummy content"], "ADSL ekim.pdf", {
         type: "application/pdf",
       });
       const res = await suggestDocumentSubject({ file });
-      expect(res.subject).toBe("Ekim Ayı ADSL / İnternet Hizmet Faturası");
-      expect(res.suggestedFilename).toBe("Ekim_Ayi_ADSL_Internet_Hizmet_Faturasi.pdf");
+      expect(res.subject).toBe(`${currentYear} Yılı Ekim Ayı ADSL / İnternet Hizmet Faturası`);
+      expect(res.suggestedFilename).toBe(`${currentYear}_Yili_Ekim_Ayi_ADSL_Internet_Hizmet_Faturasi.pdf`);
       expect(res.source).toBe("semantic");
     });
 

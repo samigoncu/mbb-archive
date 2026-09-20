@@ -99,21 +99,22 @@ it("hızlı başlık şablon çipine tıklandığında evrak konusunu günceller
 });
 
 it("ADSL ekim gibi parçalı adlarda semantik konuyu ve standart dosya adını otomatik belirler", async () => {
+  const currentYear = new Date().getFullYear();
   vi.mocked(uploadScannedDocumentAction).mockResolvedValue({ success: true, message: "Yüklendi" });
   const file = new File(["dummy"], "ADSL ekim.pdf", { type: "application/pdf" });
   const view = render(<ScanIndexingStudio units={[unit()]} initialContext={context()} metadataSchemas={[]} />);
   fireEvent.change(view.container.querySelector('input[type="file"]')!, { target: { files: [file] } });
 
   const textarea = view.container.querySelector("#scan-subject") as HTMLTextAreaElement;
-  expect(textarea.value).toBe("Ekim Ayı ADSL / İnternet Hizmet Faturası");
+  expect(textarea.value).toBe(`${currentYear} Yılı Ekim Ayı ADSL / İnternet Hizmet Faturası`);
 
   fireEvent.submit(view.container.querySelector("form")!);
   await waitFor(() => expect(uploadScannedDocumentAction).toHaveBeenCalled());
 
   const data = vi.mocked(uploadScannedDocumentAction).mock.calls[0][0];
-  expect(data.get("title")).toBe("Ekim Ayı ADSL / İnternet Hizmet Faturası");
+  expect(data.get("title")).toBe(`${currentYear} Yılı Ekim Ayı ADSL / İnternet Hizmet Faturası`);
   const uploadedFiles = data.getAll("files") as File[];
-  expect(uploadedFiles[0].name).toBe("Ekim_Ayi_ADSL_Internet_Hizmet_Faturasi.pdf");
+  expect(uploadedFiles[0].name).toBe(`${currentYear}_Yili_Ekim_Ayi_ADSL_Internet_Hizmet_Faturasi.pdf`);
 });
 
 it("Dosya Adını Eşle düğmesi ile evrak konusuna göre dosya adını standartlaştırır", async () => {

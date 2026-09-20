@@ -44,16 +44,49 @@ export function isGenericScannerFilename(filename: string): boolean {
   return false;
 }
 
+export function extractYearFromText(text: string): number | null {
+  const dateMatch =
+    text.match(/\b(?:\d{1,2}[./\-])(?:\d{1,2}[./\-])(20\d\d|19\d\d)\b/) ||
+    text.match(/\b(20\d\d|19\d\d)[./\-]\d{1,2}[./\-]\d{1,2}\b/);
+  if (dateMatch) {
+    return parseInt(dateMatch[1], 10);
+  }
+  return null;
+}
+
 /**
  * Dosya adındaki parçalı kısaltmaları (örn: "ADSL ekim", "maski_su", "maas_bordro")
- * belediyecilik semantik sözlüğüyle genişleterek anlamlı bir resmi başlığa dönüştürür.
+ * belediyecilik semantik sözlüğüyle genişleterek yıl ve ayı içeren anlamlı bir resmi başlığa dönüştürür.
  */
-export function detectSemanticSubjectFromKeywords(filename: string): string | null {
+export function detectSemanticSubjectFromKeywords(
+  filename: string,
+  fallbackYear?: number,
+): string | null {
   const base = filename.replace(/\.[^/.]+$/, "").toLocaleLowerCase("tr-TR");
   if (!base || base.length < 3) return null;
 
   // Alt çizgi, tire ve noktaları boşluğa çevirerek sözcük sınırlarını netleştir
   const cleanBase = base.replace(/[_.\-]+/g, " ").trim();
+
+  // Yıl tespiti:
+  // 1. Dosya adında 4 basamaklı yıl (örn: "2025", "2026")
+  let detectedYear: number | null = null;
+  const fourDigitMatch = cleanBase.match(/\b(19\d\d|20\d\d)\b/);
+  if (fourDigitMatch) {
+    detectedYear = parseInt(fourDigitMatch[1], 10);
+  } else {
+    // 2. Ay bitişiğindeki 2 basamaklı yıl (örn: "ekim 24", "ekim 26")
+    const twoDigitMatch = cleanBase.match(
+      /(?:ocak|subat|şubat|mart|nisan|mayis|mayıs|haziran|temmuz|agustos|ağustos|eylul|eylül|ekim|kasim|kasım|aralik|aralık)\s*(\d{2})\b/i,
+    );
+    if (twoDigitMatch) {
+      detectedYear = 2000 + parseInt(twoDigitMatch[1], 10);
+    } else if (fallbackYear && fallbackYear >= 1990 && fallbackYear <= 2099) {
+      detectedYear = fallbackYear;
+    } else {
+      detectedYear = new Date().getFullYear();
+    }
+  }
 
   // Ay tespiti
   let detectedMonth: string | null = null;
@@ -64,58 +97,81 @@ export function detectSemanticSubjectFromKeywords(filename: string): string | nu
     }
   }
 
+  // Dönem formatı: örn. "2026 Yılı Ekim Ayı" veya "2026 Yılı"
+  let period = "";
+  if (detectedYear && detectedMonth) {
+    period = `${detectedYear} Yılı ${detectedMonth}`;
+  } else if (detectedMonth) {
+    period = `${detectedYear ?? new Date().getFullYear()} Yılı ${detectedMonth}`;
+  } else if (detectedYear) {
+    period = `${detectedYear} Yılı`;
+  }
+
   // 1. Telekom & İnternet & ADSL
   if (/adsl|fiber|ttnet|telekom|turkcell|vodafone|superonline/i.test(cleanBase)) {
-    return detectedMonth
-      ? `${detectedMonth} ADSL / İnternet Hizmet Faturası`
+    return period
+      ? `${period} ADSL / İnternet Hizmet Faturası`
       : "ADSL / İnternet Hizmet Faturası";
   }
 
   // 2. Su ve Kanalizasyon (MASKİ)
-  if (/maski|su\s*fatura|su\s*abone/i.test(cleanBase) || (/\bsu\b/i.test(cleanBase) && (detectedMonth || /fatura/i.test(cleanBase)))) {
-    return detectedMonth
-      ? `${detectedMonth} Su ve Kanalizasyon Hizmet Faturası`
+  if (
+    /maski|su\s*fatura|su\s*abone/i.test(cleanBase) ||
+    (/\bsu\b/i.test(cleanBase) && (detectedMonth || /fatura/i.test(cleanBase)))
+  ) {
+    return period
+      ? `${period} Su ve Kanalizasyon Hizmet Faturası`
       : "Su ve Kanalizasyon Hizmet Faturası";
   }
 
   // 3. Elektrik / Doğalgaz
   if (/elektrik|tedas|gediz|aksa\s*elektrik/i.test(cleanBase)) {
-    return detectedMonth
-      ? `${detectedMonth} Elektrik Tesis Abonelik Faturası`
+    return period
+      ? `${period} Elektrik Tesis Abonelik Faturası`
       : "Elektrik Tesis Abonelik Faturası";
   }
 
   if (/dogalgaz|doğalgaz|aksa\s*gaz/i.test(cleanBase)) {
-    return detectedMonth
-      ? `${detectedMonth} Doğalgaz Tesis Abonelik Faturası`
+    return period
+      ? `${period} Doğalgaz Tesis Abonelik Faturası`
       : "Doğalgaz Tesis Abonelik Faturası";
   }
 
   // 4. Personel & Maaş & Bordro
   if (/bordro|maas|maaş|puantaj/i.test(cleanBase)) {
-    return detectedMonth
-      ? `${detectedMonth} Personel Maaş Bordrosu`
+    return period
+      ? `${period} Personel Maaş Bordrosu`
       : "Personel Maaş Bordrosu";
   }
 
   // 5. Kararlar (Meclis / Encümen)
   if (/meclis/i.test(cleanBase)) {
     const noMatch = cleanBase.match(/\b(\d{1,5})\b/);
-    return noMatch ? `Belediye Meclis Kararı (No: ${noMatch[1]})` : "Belediye Meclis Kararı";
+    const yrPrefix = detectedYear ? `${detectedYear} Yılı ` : "";
+    return noMatch
+      ? `${yrPrefix}Belediye Meclis Kararı (No: ${noMatch[1]})`
+      : `${yrPrefix}Belediye Meclis Kararı`;
   }
 
   if (/encumen|encümen/i.test(cleanBase)) {
     const noMatch = cleanBase.match(/\b(\d{1,5})\b/);
-    return noMatch ? `Belediye Encümen Kararı (No: ${noMatch[1]})` : "Belediye Encümen Kararı";
+    const yrPrefix = detectedYear ? `${detectedYear} Yılı ` : "";
+    return noMatch
+      ? `${yrPrefix}Belediye Encümen Kararı (No: ${noMatch[1]})`
+      : `${yrPrefix}Belediye Encümen Kararı`;
   }
 
   // 6. İmar / Yapı Ruhsatı / İskan
   if (/ruhsat|iskan|iskân/i.test(cleanBase)) {
-    return "Yapı Ruhsatı ve İskan Belgesi";
+    return detectedYear
+      ? `${detectedYear} Yılı Yapı Ruhsatı ve İskan Belgesi`
+      : "Yapı Ruhsatı ve İskan Belgesi";
   }
 
   if (/kamulastirma|kamulaştırma/i.test(cleanBase)) {
-    return "Kamulaştırma Karar ve Tespit Dosyası";
+    return detectedYear
+      ? `${detectedYear} Yılı Kamulaştırma Karar ve Tespit Dosyası`
+      : "Kamulaştırma Karar ve Tespit Dosyası";
   }
 
   return null;
@@ -309,9 +365,20 @@ export async function suggestDocumentSubject(params: {
     }
   }
 
-  // 2. Semantik anahtar kelime eşleşmesi (örn: "ADSL ekim" -> "Ekim Ayı ADSL / İnternet Hizmet Faturası")
+  // 2. Semantik anahtar kelime eşleşmesi (örn: "ADSL ekim" -> "2026 Yılı Ekim Ayı ADSL / İnternet Hizmet Faturası")
   if (source === "default" && file) {
-    const semantic = detectSemanticSubjectFromKeywords(file.name);
+    let textYear: number | undefined;
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      try {
+        const chunk = file.slice(0, 128 * 1024);
+        const text = await chunk.text();
+        const y = extractYearFromText(text);
+        if (y) textYear = y;
+      } catch {
+        // sessizce geç
+      }
+    }
+    const semantic = detectSemanticSubjectFromKeywords(file.name, textYear);
     if (semantic) {
       subject = semantic;
       source = "semantic";
