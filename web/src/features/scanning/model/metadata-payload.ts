@@ -76,6 +76,43 @@ export function buildMetadataPayload(
         values[field.key] = `${lat}, ${lng}`;
         break;
       }
+      case "GeoPolygon": {
+        try {
+          const parsed = JSON.parse(input);
+          values[field.key] = parsed;
+        } catch {
+          return {
+            values,
+            error: `'${field.label}' geçerli bir poligon geometrisi (GeoJSON) olmalıdır.`,
+          };
+        }
+        break;
+      }
+      case "GeoGeometry": {
+        if (input.trim().startsWith("{")) {
+          try {
+            values[field.key] = JSON.parse(input);
+          } catch {
+            return {
+              values,
+              error: `'${field.label}' geçerli bir coğrafi geometri (GeoJSON) olmalıdır.`,
+            };
+          }
+        } else {
+          // Nokta koordinatı olabilir
+          const parts = input.split(",").map((p) => p.trim());
+          if (parts.length === 2) {
+            const lat = Number(parts[0]);
+            const lng = Number(parts[1]);
+            if (!Number.isNaN(lat) && !Number.isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+              values[field.key] = `${lat}, ${lng}`;
+              break;
+            }
+          }
+          values[field.key] = input;
+        }
+        break;
+      }
       default:
         // Text, TextArea, Choice ve Date string olarak gönderilir.
         values[field.key] = input;

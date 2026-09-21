@@ -17,6 +17,8 @@ import {
   Eye,
   Gavel,
   MapPin,
+  Pentagon,
+  Shapes,
   Sparkles,
   Upload,
   X,
@@ -756,7 +758,38 @@ function MetadataFieldInput({
   const options = parseFieldOptions(field.optionsJson);
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
 
-  if (field.fieldType === "GeoPoint") {
+  if (field.fieldType === "GeoPoint" || field.fieldType === "GeoPolygon" || field.fieldType === "GeoGeometry") {
+    const defaultMode =
+      field.fieldType === "GeoPolygon"
+        ? "polygon"
+        : field.fieldType === "GeoGeometry"
+          ? "polygon"
+          : "point";
+
+    let displaySummary = "";
+    if (value) {
+      if (value.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed.type === "Polygon") {
+            const count = Array.isArray(parsed.coordinates?.[0]) ? parsed.coordinates[0].length - 1 : 0;
+            displaySummary = `Poligon (${count} köşe)`;
+          } else if (parsed.type === "LineString") {
+            const count = Array.isArray(parsed.coordinates) ? parsed.coordinates.length : 0;
+            displaySummary = `Çizgi / Hat (${count} nokta)`;
+          } else if (parsed.type === "EntityRef") {
+            displaySummary = `CBS: ${parsed.name} (${parsed.entityType})`;
+          } else {
+            displaySummary = "Coğrafi Geometri (GeoJSON)";
+          }
+        } catch {
+          displaySummary = value.slice(0, 30);
+        }
+      } else {
+        displaySummary = `Nokta: ${value}`;
+      }
+    }
+
     return (
       <div className="flex flex-col gap-1">
         <label htmlFor={id} className="font-semibold text-foreground">
@@ -767,7 +800,13 @@ function MetadataFieldInput({
           <input
             id={id}
             type="text"
-            placeholder="Enlem, Boylam (Örn: 38.3552, 38.3095)"
+            placeholder={
+              field.fieldType === "GeoPolygon"
+                ? "Poligon geometrisi (Haritada çizerek seçin)"
+                : field.fieldType === "GeoGeometry"
+                  ? "Nokta, çizgi, poligon veya CBS varlığı"
+                  : "Enlem, Boylam (Örn: 38.3552, 38.3095)"
+            }
             value={value}
             required={field.isRequired}
             onChange={(event) => onChange(event.target.value)}
@@ -779,18 +818,33 @@ function MetadataFieldInput({
             size="sm"
             onClick={() => setIsMapPickerOpen(true)}
             className="shrink-0 gap-1 text-xs"
-            title="Haritadan Konum / Nokta Seç"
+            title="Haritada Konum, Poligon veya CBS Varlığı Seç"
           >
-            <MapPin className="size-3.5 text-rose-600" />
-            Haritada Seç
+            {field.fieldType === "GeoPolygon" ? (
+              <Pentagon className="size-3.5 text-amber-600" />
+            ) : field.fieldType === "GeoGeometry" ? (
+              <Shapes className="size-3.5 text-primary" />
+            ) : (
+              <MapPin className="size-3.5 text-rose-600" />
+            )}
+            {field.fieldType === "GeoPolygon" ? "Alanı Çiz / Seç" : "Haritada Seç"}
           </Button>
         </div>
+        {displaySummary && (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground">Seçim:</span>
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+              {displaySummary}
+            </span>
+          </div>
+        )}
         {isMapPickerOpen && (
           <GeoPointPickerDialog
             isOpen={isMapPickerOpen}
             onClose={() => setIsMapPickerOpen(false)}
             initialCoordinate={value}
-            onSelect={(coords) => onChange(coords)}
+            defaultMode={defaultMode}
+            onSelect={(val) => onChange(val)}
           />
         )}
       </div>

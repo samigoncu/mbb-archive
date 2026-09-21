@@ -11,5 +11,7 @@ public enum MetadataFieldType
     Choice = 7,
     MultiChoice = 8,
     Json = 9,
-    GeoPoint = 10
+    GeoPoint = 10,
+    GeoPolygon = 11,
+    GeoGeometry = 12
 }

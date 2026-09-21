@@ -78,3 +78,14 @@ export async function closeGeoRelationAction(
 
   return { status: "success", message: "İlişki kapatıldı." };
 }
+
+export async function searchGeoEntitiesAction(search: string) {
+  const { getGeoEntities } = await import("@/features/geo/api/get-geo");
+  const result = await getGeoEntities({ search });
+  return result.items;
+}
+
+export async function getGeoEntityDetailsAction(id: string) {
+  const { getGeoEntity } = await import("@/features/geo/api/get-geo");
+  return await getGeoEntity(id);
+}

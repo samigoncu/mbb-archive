@@ -61,7 +61,9 @@ export type MetadataFieldType =
   | "Choice"
   | "MultiChoice"
   | "Json"
-  | "GeoPoint";
+  | "GeoPoint"
+  | "GeoPolygon"
+  | "GeoGeometry";
 
 export type MetadataFieldDefinition = {
   id: string;
@@ -116,5 +118,7 @@ export const metadataFieldTypeLabels: Record<string, string> = {
   Choice: "Tek seçim",
   MultiChoice: "Çok seçim",
   Json: "JSON",
-  GeoPoint: "Harita Konumu / Koordinat",
+  GeoPoint: "Harita Konumu (Nokta / Koordinat)",
+  GeoPolygon: "Harita Alanı (Poligon / Saha / Parsel)",
+  GeoGeometry: "Coğrafi Geometri (Nokta, Çizgi veya Poligon)",
 };

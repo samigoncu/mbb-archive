@@ -289,73 +289,106 @@ async function linkMetadataGeoRelation(
   documentTitle: string,
   metadataValues: Record<string, unknown>,
 ) {
-  let coordinates: [number, number] | null = null;
   let validFrom: string | null = null;
   let validTo: string | null = null;
+  let targetGeoEntityId: string | null = null;
+  let customGeoJson: string | null = null;
+  let geometryName: string | null = null;
 
-  for (const [key, val] of Object.entries(metadataValues)) {
+  for (const [key, rawVal] of Object.entries(metadataValues)) {
     const lowerKey = key.toLowerCase();
 
-    if (typeof val === "string") {
-      const trimmed = val.trim();
+    // Tarih alanlarını tespit et
+    if (typeof rawVal === "string") {
+      const trimmed = rawVal.trim();
       if ((lowerKey.includes("baslangic") || lowerKey.includes("start")) && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
         try { validFrom = new Date(trimmed).toISOString(); } catch { }
       }
       if ((lowerKey.includes("bitis") || lowerKey.includes("end")) && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
         try { validTo = new Date(trimmed).toISOString(); } catch { }
       }
+    }
 
-      const parts = trimmed.split(",").map((p) => Number(p.trim()));
+    // Coğrafi değeri çözümle
+    let geoObj: Record<string, unknown> | null = null;
+    if (typeof rawVal === "object" && rawVal !== null) {
+      geoObj = rawVal as Record<string, unknown>;
+    } else if (typeof rawVal === "string" && rawVal.trim().startsWith("{")) {
+      try {
+        geoObj = JSON.parse(rawVal);
+      } catch { }
+    }
+
+    if (geoObj) {
+      // 1. CBS Varlık Referansı
+      if (typeof geoObj.entityId === "string" && geoObj.entityId) {
+        targetGeoEntityId = geoObj.entityId;
+        continue;
+      }
+
+      // 2. GeoJSON Nesnesi (Polygon, LineString, Point)
+      if (typeof geoObj.type === "string" && geoObj.coordinates) {
+        customGeoJson = JSON.stringify(geoObj);
+        geometryName = `${documentTitle || "Evrak"} (${geoObj.type})`;
+        continue;
+      }
+    }
+
+    // 3. Klasik "lat, lng" koordinat metni
+    if (typeof rawVal === "string") {
+      const parts = rawVal.split(",").map((p) => Number(p.trim()));
       if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
         const [lat, lng] = parts;
         if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          coordinates = [lat, lng];
+          customGeoJson = JSON.stringify({
+            type: "Point",
+            coordinates: [lng, lat],
+          });
+          geometryName = documentTitle || `Konum (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
         }
       }
     }
   }
 
-  if (!coordinates) return;
+  // Eğer yeni bir yerel geometri oluşturulacaksa
+  if (!targetGeoEntityId && customGeoJson) {
+    const entityResult = await apiPost<
+      {
+        provider: string;
+        layerName: string;
+        entityType: string;
+        name: string;
+        geoJson: string;
+      },
+      { id: string }
+    >("/geo/entities", {
+      provider: "local",
+      layerName: "local",
+      entityType: "CustomGeometry",
+      name: geometryName || documentTitle || "Coğrafi Konum",
+      geoJson: customGeoJson,
+    });
 
-  const [lat, lng] = coordinates;
-  const entityName = documentTitle || `Konum (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    if (entityResult?.id) {
+      targetGeoEntityId = entityResult.id;
+    }
+  }
 
-  // 1. CBS yerel coğrafi varlığı oluştur (Point GeoJSON)
-  const entityResult = await apiPost<
-    {
-      provider: string;
-      layerName: string;
-      entityType: string;
-      name: string;
-      geoJson: string;
-    },
-    { id: string }
-  >("/geo/entities", {
-    provider: "local",
-    layerName: "local",
-    entityType: "CustomGeometry",
-    name: entityName,
-    geoJson: JSON.stringify({
-      type: "Point",
-      coordinates: [lng, lat],
-    }),
-  });
-
-  if (!entityResult?.id) return;
-
-  // 2. Belge ile coğrafi varlığı ilişkilendir
-  await apiPost<
-    {
-      geoEntityId: string;
-      relationType: string;
-      validFrom: string | null;
-      validTo: string | null;
-    },
-    { id: string }
-  >(`/geo/documents/${documentId}/relations`, {
-    geoEntityId: entityResult.id,
-    relationType: "Subject",
-    validFrom,
-    validTo,
-  });
+  // CBS Varlığı ile belgeyi ilişkilendir
+  if (targetGeoEntityId) {
+    await apiPost<
+      {
+        geoEntityId: string;
+        relationType: string;
+        validFrom: string | null;
+        validTo: string | null;
+      },
+      { id: string }
+    >(`/geo/documents/${documentId}/relations`, {
+      geoEntityId: targetGeoEntityId,
+      relationType: "Subject",
+      validFrom,
+      validTo,
+    });
+  }
 }

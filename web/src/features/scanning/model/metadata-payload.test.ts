@@ -119,4 +119,40 @@ describe("buildMetadataPayload", () => {
       "'Konum' geçerli bir enlem (-90..90) ve boylam (-180..180) olmalıdır.",
     );
   });
+
+  it("validates and normalizes GeoPolygon", () => {
+    const definition = schema([
+      field({ key: "parsel_alani", label: "Parsel Alanı", fieldType: "GeoPolygon" }),
+    ]);
+
+    const polygonJson = JSON.stringify({
+      type: "Polygon",
+      coordinates: [[[38.3, 38.35], [38.31, 38.35], [38.31, 38.36], [38.3, 38.36], [38.3, 38.35]]],
+    });
+
+    const result = buildMetadataPayload(definition, { parsel_alani: polygonJson });
+    expect(result.values?.parsel_alani).toEqual(JSON.parse(polygonJson));
+
+    expect(buildMetadataPayload(definition, { parsel_alani: "not a json" }).error).toBe(
+      "'Parsel Alanı' geçerli bir poligon geometrisi (GeoJSON) olmalıdır.",
+    );
+  });
+
+  it("validates and normalizes GeoGeometry", () => {
+    const definition = schema([
+      field({ key: "geometri", label: "Geometri", fieldType: "GeoGeometry" }),
+    ]);
+
+    expect(buildMetadataPayload(definition, { geometri: "38.3552, 38.3095" }).values).toEqual({
+      geometri: "38.3552, 38.3095",
+    });
+
+    const featureJson = JSON.stringify({
+      type: "LineString",
+      coordinates: [[38.3, 38.35], [38.31, 38.36]],
+    });
+    expect(buildMetadataPayload(definition, { geometri: featureJson }).values?.geometri).toEqual(
+      JSON.parse(featureJson),
+    );
+  });
 });
