@@ -2,7 +2,8 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useId, useRef, useState } from "react";
-import { Check, LocateFixed, MapPin, X } from "lucide-react";
+import { Check, LocateFixed, MapPin, Maximize2, Minimize2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +26,7 @@ export function GeoPointPickerDialog({
   onSelect: (coordinate: string) => void;
 }) {
   const containerId = useId().replace(/:/g, "");
+  const [isMaximized, setIsMaximized] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(() => {
     if (!initialCoordinate) return null;
     const parts = initialCoordinate.split(",").map((p) => Number(p.trim()));
@@ -157,18 +159,45 @@ export function GeoPointPickerDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl overflow-hidden p-0">
-        <DialogHeader className="p-4 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-            <MapPin className="size-4 text-rose-600" />
-            Haritadan Konum / Nokta Seç
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
-            Büfe, çay bahçesi, ATM, reklam panosu veya parselin yerini haritaya tıklayarak işaretleyin.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        className={cn(
+          "overflow-hidden p-0 transition-all duration-200",
+          isMaximized
+            ? "fixed inset-2 h-[calc(100vh-16px)] max-h-[calc(100vh-16px)] w-[calc(100vw-16px)] max-w-[calc(100vw-16px)]"
+            : "w-[94vw] max-w-6xl max-h-[92vh]",
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-border p-4 pb-3">
+          <div>
+            <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+              <MapPin className="size-4 text-rose-600" />
+              Haritadan Konum / Nokta Seç
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+              Büfe, çay bahçesi, ATM, reklam panosu veya parselin yerini haritaya tıklayarak işaretleyin.
+            </DialogDescription>
+          </div>
+          <div className="flex items-center gap-1.5 mr-6">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMaximized((prev) => !prev);
+                setTimeout(() => mapRef.current?.invalidateSize(), 250);
+              }}
+              title={isMaximized ? "Pencere Boyutuna Dön" : "Tam Ekran Yap"}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {isMaximized ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
+          </div>
+        </div>
 
-        <div className="relative h-[420px] w-full border-y border-border bg-muted/20">
+        <div
+          className={cn(
+            "relative w-full border-b border-border bg-muted/20",
+            isMaximized ? "h-[calc(100vh-140px)]" : "h-[620px] max-h-[70vh] min-h-[460px]",
+          )}
+        >
           <div id={containerId} className="h-full w-full" tabIndex={0} />
 
           <button
@@ -182,18 +211,19 @@ export function GeoPointPickerDialog({
           </button>
         </div>
 
-        <DialogFooter className="flex items-center justify-between gap-3 p-3">
+        <DialogFooter className="flex flex-row items-center justify-between gap-3 p-3 px-4">
           <div className="text-xs text-muted-foreground">
             {selectedPoint ? (
-              <span className="font-mono text-foreground">
-                Seçilen: {selectedPoint.lat.toFixed(6)}, {selectedPoint.lng.toFixed(6)}
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 font-mono text-xs font-semibold text-foreground">
+                <MapPin className="size-3.5 text-rose-600" />
+                {selectedPoint.lat.toFixed(6)}, {selectedPoint.lng.toFixed(6)}
               </span>
             ) : (
               <span>İşaretlemek için haritada bir noktaya tıklayın.</span>
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
               <X className="size-3.5" />
               Vazgeç
