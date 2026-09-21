@@ -269,17 +269,20 @@ export function GeoPointPickerDialog({
   const [isDetectingBuilding, setIsDetectingBuilding] = useState(false);
   const [detectedBuildingInfo, setDetectedBuildingInfo] = useState<string | null>(null);
 
+  const [mapInstance, setMapInstance] = useState<import("leaflet").Map | null>(null);
+
   // Başlangıç modunu belirleme
   const [mode, setMode] = useState<GeoPickerMode>(() => {
-    if (defaultMode) return defaultMode;
     if (initialCoordinate?.trim().startsWith("{")) {
       try {
         const parsed = JSON.parse(initialCoordinate);
+        if (parsed.subType === "building") return "building";
         if (parsed.type === "Polygon") return "polygon";
         if (parsed.type === "LineString") return "linestring";
         if (parsed.type === "EntityRef") return "cbs";
       } catch { }
     }
+    if (defaultMode) return defaultMode;
     return "point";
   });
 
@@ -472,10 +475,11 @@ export function GeoPointPickerDialog({
         }
       });
 
+      mapRef.current = map;
+      setMapInstance(map);
+
       setTimeout(() => map.invalidateSize(), 150);
       setTimeout(() => map.invalidateSize(), 400);
-
-      mapRef.current = map;
     }
 
     void initMap();
@@ -484,6 +488,7 @@ export function GeoPointPickerDialog({
       cancelled = true;
       mapRef.current?.remove();
       mapRef.current = null;
+      setMapInstance(null);
       pointMarkerRef.current = null;
       polygonLayerGroupRef.current = null;
       lineLayerGroupRef.current = null;
@@ -493,8 +498,8 @@ export function GeoPointPickerDialog({
 
   // Nokta, ikon veya renk değiştiğinde haritada güncelle
   useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
+    if (!mapInstance) return;
+    const map = mapInstance;
 
     async function syncPoint() {
       const leaflet = (await import("leaflet")).default;
@@ -508,14 +513,21 @@ export function GeoPointPickerDialog({
             .marker([selectedPoint.lat, selectedPoint.lng], { icon })
             .addTo(map);
         }
+        if (mode === "point") {
+          map.setView([selectedPoint.lat, selectedPoint.lng], Math.max(map.getZoom(), 16));
+        }
+      } else if (pointMarkerRef.current) {
+        map.removeLayer(pointMarkerRef.current);
+        pointMarkerRef.current = null;
       }
     }
     void syncPoint();
-  }, [selectedPoint, selectedIcon, selectedColor]);
+  }, [mapInstance, selectedPoint, selectedIcon, selectedColor, mode]);
 
   // Poligon / Bina noktaları değiştiğinde haritada güncelle
   useEffect(() => {
-    if (!mapRef.current || !polygonLayerGroupRef.current) return;
+    if (!mapInstance || !polygonLayerGroupRef.current) return;
+    const map = mapInstance;
     const group = polygonLayerGroupRef.current;
 
     async function syncPolygon() {
@@ -541,7 +553,7 @@ export function GeoPointPickerDialog({
 
       const latlngs = polygonPoints.map((p) => [p.lat, p.lng] as [number, number]);
       if (polygonPoints.length >= 3) {
-        leaflet
+        const polygonLayer = leaflet
           .polygon(latlngs, {
             color: isBuilding ? "#7c3aed" : "#e11d48",
             fillColor: isBuilding ? "#a855f7" : "#f43f5e",
@@ -549,6 +561,11 @@ export function GeoPointPickerDialog({
             weight: isBuilding ? 3.5 : 2.5,
           })
           .addTo(group);
+
+        const bounds = polygonLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+        }
       } else if (polygonPoints.length === 2) {
         leaflet
           .polyline(latlngs, {
@@ -561,11 +578,12 @@ export function GeoPointPickerDialog({
     }
 
     void syncPolygon();
-  }, [polygonPoints, mode]);
+  }, [mapInstance, polygonPoints, mode]);
 
   // Çizgi noktaları değiştiğinde katmanı güncelle
   useEffect(() => {
-    if (!mapRef.current || !lineLayerGroupRef.current) return;
+    if (!mapInstance || !lineLayerGroupRef.current) return;
+    const map = mapInstance;
     const group = lineLayerGroupRef.current;
 
     async function syncLine() {
@@ -589,22 +607,27 @@ export function GeoPointPickerDialog({
 
       if (linePoints.length >= 2) {
         const latlngs = linePoints.map((p) => [p.lat, p.lng] as [number, number]);
-        leaflet
+        const polylineLayer = leaflet
           .polyline(latlngs, {
             color: "#2563eb",
             weight: 3.5,
           })
           .addTo(group);
+
+        const bounds = polylineLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+        }
       }
     }
 
     void syncLine();
-  }, [linePoints]);
+  }, [mapInstance, linePoints]);
 
   // CBS Varlık seçildiğinde haritada vurgula
   useEffect(() => {
-    if (!mapRef.current || !selectedCbsEntity) return;
-    const map = mapRef.current;
+    if (!mapInstance || !selectedCbsEntity) return;
+    const map = mapInstance;
 
     async function syncCbsEntity() {
       const leaflet = (await import("leaflet")).default;
@@ -639,13 +662,13 @@ export function GeoPointPickerDialog({
 
         const bounds = geoJsonLayer.getBounds();
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
         }
       } catch { }
     }
 
     void syncCbsEntity();
-  }, [selectedCbsEntity]);
+  }, [mapInstance, selectedCbsEntity]);
 
   // GPS ile Konumumu Bul
   function handleLocateMe() {
@@ -716,6 +739,7 @@ export function GeoPointPickerDialog({
       const geoJson = {
         type: "Polygon",
         coordinates: [closed],
+        ...(mode === "building" ? { subType: "building" } : {}),
       };
       const area = calculatePolygonArea(polygonPoints);
       const prefix = mode === "building" ? "🏢 Bina Oturumu" : "📐 Poligon";
@@ -1227,3 +1251,4 @@ export function GeoPointPickerDialog({
     </Dialog>
   );
 }
+
