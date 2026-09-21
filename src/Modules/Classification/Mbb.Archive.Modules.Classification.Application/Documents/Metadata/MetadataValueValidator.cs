@@ -47,6 +47,38 @@ internal static class MetadataValueValidator
             MetadataFieldType.DateTime => value.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(value.GetString(), out _),
             MetadataFieldType.MultiChoice => value.ValueKind == JsonValueKind.Array && value.EnumerateArray().All(x => x.ValueKind == JsonValueKind.String),
             MetadataFieldType.Json => true,
+            MetadataFieldType.GeoPoint => IsValidGeoPoint(value),
             _ => false
         };
+
+    private static bool IsValidGeoPoint(JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            var str = value.GetString();
+            if (string.IsNullOrWhiteSpace(str)) return false;
+            var parts = str.Split(',');
+            if (parts.Length != 2) return false;
+            return double.TryParse(parts[0].Trim(), System.Globalization.CultureInfo.InvariantCulture, out var lat)
+                && double.TryParse(parts[1].Trim(), System.Globalization.CultureInfo.InvariantCulture, out var lon)
+                && lat is >= -90 and <= 90
+                && lon is >= -180 and <= 180;
+        }
+
+        if (value.ValueKind == JsonValueKind.Object)
+        {
+            if (value.TryGetProperty("lat", out var latProp) && value.TryGetProperty("lng", out var lngProp))
+            {
+                return latProp.TryGetDouble(out var lat) && lngProp.TryGetDouble(out var lng)
+                    && lat is >= -90 and <= 90 && lng is >= -180 and <= 180;
+            }
+            if (value.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "Point" && value.TryGetProperty("coordinates", out var coordsProp) && coordsProp.ValueKind == JsonValueKind.Array)
+            {
+                var arr = coordsProp.EnumerateArray().ToList();
+                return arr.Count >= 2 && arr[0].TryGetDouble(out _) && arr[1].TryGetDouble(out _);
+            }
+        }
+
+        return false;
+    }
 }

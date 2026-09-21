@@ -10,5 +10,6 @@ public enum MetadataFieldType
     DateTime = 6,
     Choice = 7,
     MultiChoice = 8,
-    Json = 9
+    Json = 9,
+    GeoPoint = 10
 }

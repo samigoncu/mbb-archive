@@ -101,4 +101,22 @@ describe("buildMetadataPayload", () => {
       evrak_tarihi: "2026-09-04",
     });
   });
+
+  it("validates and normalizes GeoPoint coordinates", () => {
+    const definition = schema([
+      field({ key: "konum", label: "Konum", fieldType: "GeoPoint" }),
+    ]);
+
+    expect(buildMetadataPayload(definition, { konum: "38.3552, 38.3095" }).values).toEqual({
+      konum: "38.3552, 38.3095",
+    });
+
+    expect(buildMetadataPayload(definition, { konum: "gecersiz,koordinat" }).error).toBe(
+      "'Konum' geçerli bir enlem (-90..90) ve boylam (-180..180) olmalıdır.",
+    );
+
+    expect(buildMetadataPayload(definition, { konum: "150, 38.3095" }).error).toBe(
+      "'Konum' geçerli bir enlem (-90..90) ve boylam (-180..180) olmalıdır.",
+    );
+  });
 });

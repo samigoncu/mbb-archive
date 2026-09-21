@@ -60,7 +60,8 @@ export type MetadataFieldType =
   | "DateTime"
   | "Choice"
   | "MultiChoice"
-  | "Json";
+  | "Json"
+  | "GeoPoint";
 
 export type MetadataFieldDefinition = {
   id: string;
@@ -115,4 +116,5 @@ export const metadataFieldTypeLabels: Record<string, string> = {
   Choice: "Tek seçim",
   MultiChoice: "Çok seçim",
   Json: "JSON",
+  GeoPoint: "Harita Konumu / Koordinat",
 };

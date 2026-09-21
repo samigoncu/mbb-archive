@@ -195,11 +195,20 @@ export async function completeScannedDocumentAction(documentId: string, formData
     } catch (error) {
       warnings.push(toMessage(error, "Evrak üstverisi kaydedilemedi."));
     }
+
+    try {
+      await linkMetadataGeoRelation(documentId, title, metadataValues);
+    } catch {
+      // Coğrafi varlık bağlantısı başarısız olsa bile evrak akışı kesilmez
+      warnings.push("Coğrafi harita konumu otomatik bağlanamadı; belge detayından bağlayabilirsiniz.");
+    }
   }
 
   revalidatePath("/islem-takibi");
   revalidatePath("/tarama");
   revalidatePath("/documents");
+  revalidatePath(`/documents/${documentId}`);
+  revalidatePath("/harita");
 
   return {
     success: true,
@@ -273,4 +282,80 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function linkMetadataGeoRelation(
+  documentId: string,
+  documentTitle: string,
+  metadataValues: Record<string, unknown>,
+) {
+  let coordinates: [number, number] | null = null;
+  let validFrom: string | null = null;
+  let validTo: string | null = null;
+
+  for (const [key, val] of Object.entries(metadataValues)) {
+    const lowerKey = key.toLowerCase();
+
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      if ((lowerKey.includes("baslangic") || lowerKey.includes("start")) && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+        try { validFrom = new Date(trimmed).toISOString(); } catch { }
+      }
+      if ((lowerKey.includes("bitis") || lowerKey.includes("end")) && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+        try { validTo = new Date(trimmed).toISOString(); } catch { }
+      }
+
+      const parts = trimmed.split(",").map((p) => Number(p.trim()));
+      if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+        const [lat, lng] = parts;
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          coordinates = [lat, lng];
+        }
+      }
+    }
+  }
+
+  if (!coordinates) return;
+
+  const [lat, lng] = coordinates;
+  const entityName = documentTitle || `Konum (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+
+  // 1. CBS yerel coğrafi varlığı oluştur (Point GeoJSON)
+  const entityResult = await apiPost<
+    {
+      provider: string;
+      layerName: string;
+      entityType: string;
+      name: string;
+      geoJson: string;
+    },
+    { id: string }
+  >("/geo/entities", {
+    provider: "local",
+    layerName: "local",
+    entityType: "CustomGeometry",
+    name: entityName,
+    geoJson: JSON.stringify({
+      type: "Point",
+      coordinates: [lng, lat],
+    }),
+  });
+
+  if (!entityResult?.id) return;
+
+  // 2. Belge ile coğrafi varlığı ilişkilendir
+  await apiPost<
+    {
+      geoEntityId: string;
+      relationType: string;
+      validFrom: string | null;
+      validTo: string | null;
+    },
+    { id: string }
+  >(`/geo/documents/${documentId}/relations`, {
+    geoEntityId: entityResult.id,
+    relationType: "Subject",
+    validFrom,
+    validTo,
+  });
 }

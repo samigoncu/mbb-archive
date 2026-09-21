@@ -57,6 +57,25 @@ export function buildMetadataPayload(
           return { values, error: `'${field.label}' geçerli JSON olmalıdır.` };
         }
         break;
+      case "GeoPoint": {
+        const parts = input.split(",").map((p) => p.trim());
+        if (parts.length !== 2) {
+          return {
+            values,
+            error: `'${field.label}' geçerli bir koordinat olmalıdır (Örn: 38.3552, 38.3095).`,
+          };
+        }
+        const lat = Number(parts[0]);
+        const lng = Number(parts[1]);
+        if (Number.isNaN(lat) || Number.isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+          return {
+            values,
+            error: `'${field.label}' geçerli bir enlem (-90..90) ve boylam (-180..180) olmalıdır.`,
+          };
+        }
+        values[field.key] = `${lat}, ${lng}`;
+        break;
+      }
       default:
         // Text, TextArea, Choice ve Date string olarak gönderilir.
         values[field.key] = input;

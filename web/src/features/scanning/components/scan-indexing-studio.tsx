@@ -16,6 +16,7 @@ import {
   Camera,
   Eye,
   Gavel,
+  MapPin,
   Sparkles,
   Upload,
   X,
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { uploadScannedDocumentAction } from "@/features/scanning/api/stream-upload";
+import { GeoPointPickerDialog } from "@/features/geo/components/geo-point-picker-dialog";
 import { PostUploadDeclareDialog } from "@/features/archive/components/post-upload-declare-dialog";
 import {
   parseFieldOptions,
@@ -752,6 +754,48 @@ function MetadataFieldInput({
 }) {
   const id = `metadata-${field.key}`;
   const options = parseFieldOptions(field.optionsJson);
+  const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
+
+  if (field.fieldType === "GeoPoint") {
+    return (
+      <div className="flex flex-col gap-1">
+        <label htmlFor={id} className="font-semibold text-foreground">
+          {field.label}
+          {field.isRequired && <span className="ml-0.5 text-destructive">*</span>}
+        </label>
+        <div className="flex gap-1.5">
+          <input
+            id={id}
+            type="text"
+            placeholder="Enlem, Boylam (Örn: 38.3552, 38.3095)"
+            value={value}
+            required={field.isRequired}
+            onChange={(event) => onChange(event.target.value)}
+            className={`${inputClass} flex-1 font-mono text-xs`}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsMapPickerOpen(true)}
+            className="shrink-0 gap-1 text-xs"
+            title="Haritadan Konum / Nokta Seç"
+          >
+            <MapPin className="size-3.5 text-rose-600" />
+            Haritada Seç
+          </Button>
+        </div>
+        {isMapPickerOpen && (
+          <GeoPointPickerDialog
+            isOpen={isMapPickerOpen}
+            onClose={() => setIsMapPickerOpen(false)}
+            initialCoordinate={value}
+            onSelect={(coords) => onChange(coords)}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (field.fieldType === "Boolean") {
     return (
