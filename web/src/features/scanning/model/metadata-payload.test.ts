@@ -118,6 +118,16 @@ describe("buildMetadataPayload", () => {
     expect(buildMetadataPayload(definition, { konum: "150, 38.3095" }).error).toBe(
       "'Konum' geçerli bir enlem (-90..90) ve boylam (-180..180) olmalıdır.",
     );
+
+    const pointWithIcon = JSON.stringify({
+      type: "Point",
+      coordinates: [38.3095, 38.3552],
+      icon: "store",
+      color: "#f59e0b",
+    });
+    expect(buildMetadataPayload(definition, { konum: pointWithIcon }).values?.konum).toEqual(
+      JSON.parse(pointWithIcon),
+    );
   });
 
   it("validates and normalizes GeoPolygon", () => {

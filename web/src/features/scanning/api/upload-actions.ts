@@ -359,6 +359,7 @@ async function linkMetadataGeoRelation(
         entityType: string;
         name: string;
         geoJson: string;
+        propertiesJson?: string | null;
       },
       { id: string }
     >("/geo/entities", {

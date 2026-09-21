@@ -58,6 +58,18 @@ export function buildMetadataPayload(
         }
         break;
       case "GeoPoint": {
+        if (input.trim().startsWith("{")) {
+          try {
+            const parsed = JSON.parse(input);
+            values[field.key] = parsed;
+            break;
+          } catch {
+            return {
+              values,
+              error: `'${field.label}' geçerli bir nokta geometrisi veya koordinat olmalıdır.`,
+            };
+          }
+        }
         const parts = input.split(",").map((p) => p.trim());
         if (parts.length !== 2) {
           return {

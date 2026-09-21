@@ -4,10 +4,12 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Check,
+  ChevronDown,
   LocateFixed,
   MapPin,
   Maximize2,
   Minimize2,
+  Paintbrush,
   Pentagon,
   Route,
   Search,
@@ -22,7 +24,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { searchGeoEntitiesAction, getGeoEntityDetailsAction } from "@/features/geo/api/geo-relation-actions";
@@ -30,20 +31,157 @@ import type { GeoEntitySummary } from "@/features/geo/model/geo";
 
 export type GeoPickerMode = "point" | "polygon" | "linestring" | "cbs";
 
-export type GeoPointPickerDialogProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  initialCoordinate?: string;
-  defaultMode?: GeoPickerMode;
-  onSelect: (value: string, summary?: string) => void;
+export type MarkerIconType =
+  | "pin"
+  | "store"
+  | "coffee"
+  | "atm"
+  | "billboard"
+  | "parking"
+  | "building"
+  | "park"
+  | "fuel"
+  | "facility";
+
+export type MarkerColorType =
+  | "red"
+  | "blue"
+  | "green"
+  | "amber"
+  | "purple"
+  | "slate";
+
+export const MARKER_COLORS: Record<MarkerColorType, { name: string; hex: string; bgClass: string }> = {
+  red: { name: "Kırmızı", hex: "#ef4444", bgClass: "bg-red-500" },
+  blue: { name: "Mavi", hex: "#3b82f6", bgClass: "bg-blue-500" },
+  green: { name: "Yeşil", hex: "#10b981", bgClass: "bg-emerald-500" },
+  amber: { name: "Turuncu", hex: "#f59e0b", bgClass: "bg-amber-500" },
+  purple: { name: "Mor", hex: "#8b5cf6", bgClass: "bg-purple-500" },
+  slate: { name: "Gri / Füme", hex: "#475569", bgClass: "bg-slate-600" },
 };
+
+export const MARKER_ICONS: Record<
+  MarkerIconType,
+  { label: string; defaultColor: MarkerColorType; emoji: string; svg: string }
+> = {
+  pin: {
+    label: "Standart Pin",
+    defaultColor: "red",
+    emoji: "📍",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`,
+  },
+  store: {
+    label: "Büfe / Satış Noktası",
+    defaultColor: "amber",
+    emoji: "🏪",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>`,
+  },
+  coffee: {
+    label: "Çay Bahçesi / Kafe",
+    defaultColor: "green",
+    emoji: "☕",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h12Z"/><path d="M6 2v2"/><path d="M17 11h2a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-2"/></svg>`,
+  },
+  atm: {
+    label: "ATM / Bankamatik",
+    defaultColor: "blue",
+    emoji: "🏧",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`,
+  },
+  billboard: {
+    label: "Reklam Panosu / Totem",
+    defaultColor: "purple",
+    emoji: "📢",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="3" rx="2"/><path d="M12 15v6"/><path d="M8 21h8"/></svg>`,
+  },
+  parking: {
+    label: "Otopark",
+    defaultColor: "blue",
+    emoji: "🅿️",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>`,
+  },
+  building: {
+    label: "Dükkan / Bina / İşyeri",
+    defaultColor: "slate",
+    emoji: "🏢",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></svg>`,
+  },
+  park: {
+    label: "Park / Yeşil Alan",
+    defaultColor: "green",
+    emoji: "🌳",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v12"/><path d="M12 10a5 5 0 0 0-5-5c0-1.5 1-3 3-4 1.5 1 2 2.5 2 4a5 5 0 0 0 5 5c0-1.5-1-3-3-4-1.5 1-2 2.5-2 4Z"/></svg>`,
+  },
+  fuel: {
+    label: "Akaryakıt / İstasyon",
+    defaultColor: "amber",
+    emoji: "⛽",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h12"/><path d="M4 9h10"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>`,
+  },
+  facility: {
+    label: "Tesis / Depo",
+    defaultColor: "purple",
+    emoji: "🏭",
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>`,
+  },
+};
+
+/**
+ * Leaflet için özel SVG rozetli pin ikonu üretir.
+ */
+function createCustomMarkerIcon(
+  leaflet: typeof import("leaflet"),
+  iconType: MarkerIconType,
+  colorType: MarkerColorType,
+) {
+  const iconDef = MARKER_ICONS[iconType] ?? MARKER_ICONS.pin;
+  const colorDef = MARKER_COLORS[colorType] ?? MARKER_COLORS.red;
+
+  const html = `
+    <div style="position: relative; width: 36px; height: 42px; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+      <div style="
+        width: 32px;
+        height: 32px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        background: ${colorDef.hex};
+        border: 2px solid white;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+      ">
+        <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 16px; height: 16px;">
+          ${iconDef.svg}
+        </div>
+      </div>
+      <div style="
+        width: 8px;
+        height: 4px;
+        background: rgba(0,0,0,0.35);
+        border-radius: 50%;
+        margin-top: 3px;
+        filter: blur(1px);
+      "></div>
+    </div>
+  `;
+
+  return leaflet.divIcon({
+    html,
+    className: "custom-map-marker-pin",
+    iconSize: [36, 42],
+    iconAnchor: [18, 40],
+    popupAnchor: [0, -36],
+  });
+}
 
 /**
  * Küresel yüzeyde (WGS84) Geodesic poligon alanı hesaplar (metrekare).
  */
 function calculatePolygonArea(coords: Array<{ lat: number; lng: number }>): number {
   if (coords.length < 3) return 0;
-  const radius = 6378137; // metre
+  const radius = 6378137;
   let area = 0;
   for (let i = 0; i < coords.length; i++) {
     const p1 = coords[i];
@@ -105,9 +243,20 @@ export function GeoPointPickerDialog({
   initialCoordinate,
   defaultMode,
   onSelect,
-}: GeoPointPickerDialogProps) {
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  initialCoordinate?: string;
+  defaultMode?: GeoPickerMode;
+  onSelect: (value: string, summary?: string) => void;
+}) {
   const containerId = useId().replace(/:/g, "");
   const [isMaximized, setIsMaximized] = useState(false);
+
+  // İkon ve Renk Seçimi
+  const [selectedIcon, setSelectedIcon] = useState<MarkerIconType>("pin");
+  const [selectedColor, setSelectedColor] = useState<MarkerColorType>("red");
+  const [showIconPicker, setShowIconPicker] = useState(false);
 
   // Başlangıç modunu belirleme
   const [mode, setMode] = useState<GeoPickerMode>(() => {
@@ -127,7 +276,20 @@ export function GeoPointPickerDialog({
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(() => {
     if (!initialCoordinate) return null;
     const trimmed = initialCoordinate.trim();
-    if (!trimmed.startsWith("{")) {
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed.type === "Point" && Array.isArray(parsed.coordinates) && parsed.coordinates.length >= 2) {
+          if (parsed.icon && parsed.icon in MARKER_ICONS) {
+            setSelectedIcon(parsed.icon as MarkerIconType);
+          }
+          if (parsed.color && parsed.color in MARKER_COLORS) {
+            setSelectedColor(parsed.color as MarkerColorType);
+          }
+          return { lat: parsed.coordinates[1], lng: parsed.coordinates[0] };
+        }
+      } catch { }
+    } else {
       const parts = trimmed.split(",").map((p) => Number(p.trim()));
       if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
         return { lat: parts[0], lng: parts[1] };
@@ -190,13 +352,19 @@ export function GeoPointPickerDialog({
   });
 
   const mapRef = useRef<import("leaflet").Map | null>(null);
-  const pointMarkerRef = useRef<import("leaflet").CircleMarker | null>(null);
+  const pointMarkerRef = useRef<import("leaflet").Marker | null>(null);
   const polygonLayerGroupRef = useRef<import("leaflet").LayerGroup | null>(null);
   const lineLayerGroupRef = useRef<import("leaflet").LayerGroup | null>(null);
   const cbsLayerGroupRef = useRef<import("leaflet").GeoJSON | null>(null);
 
   const modeRef = useRef(mode);
   modeRef.current = mode;
+
+  const selectedIconRef = useRef(selectedIcon);
+  selectedIconRef.current = selectedIcon;
+
+  const selectedColorRef = useRef(selectedColor);
+  selectedColorRef.current = selectedColor;
 
   // Harita başlatma
   useEffect(() => {
@@ -260,17 +428,13 @@ export function GeoPointPickerDialog({
         const { lat, lng } = e.latlng;
 
         if (currentMode === "point") {
+          const icon = createCustomMarkerIcon(leaflet, selectedIconRef.current, selectedColorRef.current);
           if (pointMarkerRef.current) {
             pointMarkerRef.current.setLatLng([lat, lng]);
+            pointMarkerRef.current.setIcon(icon);
           } else {
             pointMarkerRef.current = leaflet
-              .circleMarker([lat, lng], {
-                radius: 9,
-                color: "#dc2626",
-                fillColor: "#ef4444",
-                fillOpacity: 0.9,
-                weight: 3,
-              })
+              .marker([lat, lng], { icon })
               .addTo(map);
           }
           setSelectedPoint({ lat, lng });
@@ -301,7 +465,7 @@ export function GeoPointPickerDialog({
     };
   }, [isOpen, containerId]);
 
-  // Nokta değiştiğinde haritada güncelle
+  // Nokta, ikon veya renk değiştiğinde haritada güncelle
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;
@@ -309,28 +473,23 @@ export function GeoPointPickerDialog({
     async function syncPoint() {
       const leaflet = (await import("leaflet")).default;
       if (selectedPoint) {
+        const icon = createCustomMarkerIcon(leaflet, selectedIcon, selectedColor);
         if (pointMarkerRef.current) {
           pointMarkerRef.current.setLatLng([selectedPoint.lat, selectedPoint.lng]);
+          pointMarkerRef.current.setIcon(icon);
         } else {
           pointMarkerRef.current = leaflet
-            .circleMarker([selectedPoint.lat, selectedPoint.lng], {
-              radius: 9,
-              color: "#dc2626",
-              fillColor: "#ef4444",
-              fillOpacity: 0.9,
-              weight: 3,
-            })
+            .marker([selectedPoint.lat, selectedPoint.lng], { icon })
             .addTo(map);
         }
       }
     }
     void syncPoint();
-  }, [selectedPoint]);
+  }, [selectedPoint, selectedIcon, selectedColor]);
 
   // Poligon noktaları değiştiğinde katmanı güncelle
   useEffect(() => {
     if (!mapRef.current || !polygonLayerGroupRef.current) return;
-    const map = mapRef.current;
     const group = polygonLayerGroupRef.current;
 
     async function syncPolygon() {
@@ -339,7 +498,6 @@ export function GeoPointPickerDialog({
 
       if (polygonPoints.length === 0) return;
 
-      // Köşe noktalarını ekle
       polygonPoints.forEach((pt, idx) => {
         leaflet
           .circleMarker([pt.lat, pt.lng], {
@@ -353,7 +511,6 @@ export function GeoPointPickerDialog({
           .addTo(group);
       });
 
-      // Poligon veya önizleme çizgisi
       const latlngs = polygonPoints.map((p) => [p.lat, p.lng] as [number, number]);
       if (polygonPoints.length >= 3) {
         leaflet
@@ -470,9 +627,6 @@ export function GeoPointPickerDialog({
         const { latitude, longitude } = position.coords;
         setSelectedPoint({ lat: latitude, lng: longitude });
         mapRef.current?.setView([latitude, longitude], 17);
-        if (pointMarkerRef.current) {
-          pointMarkerRef.current.setLatLng([latitude, longitude]);
-        }
       },
       () => { },
     );
@@ -514,24 +668,36 @@ export function GeoPointPickerDialog({
   // Seçimi Onayla
   function handleConfirm() {
     if (mode === "point" && selectedPoint) {
-      const val = `${selectedPoint.lat.toFixed(6)}, ${selectedPoint.lng.toFixed(6)}`;
-      onSelect(val, `Nokta (${selectedPoint.lat.toFixed(4)}, ${selectedPoint.lng.toFixed(4)})`);
+      const iconDef = MARKER_ICONS[selectedIcon] ?? MARKER_ICONS.pin;
+      const colorDef = MARKER_COLORS[selectedColor] ?? MARKER_COLORS.red;
+
+      const geoJson = {
+        type: "Point",
+        coordinates: [selectedPoint.lng, selectedPoint.lat],
+        icon: selectedIcon,
+        color: colorDef.hex,
+        iconLabel: iconDef.label,
+      };
+
+      onSelect(
+        JSON.stringify(geoJson),
+        `${iconDef.emoji} ${iconDef.label} (${selectedPoint.lat.toFixed(4)}, ${selectedPoint.lng.toFixed(4)})`,
+      );
     } else if (mode === "polygon" && polygonPoints.length >= 3) {
-      // Kapalı halka oluştur: ilk nokta son nokta olarak da eklenir
       const closed = [...polygonPoints.map((p) => [p.lng, p.lat]), [polygonPoints[0].lng, polygonPoints[0].lat]];
       const geoJson = {
         type: "Polygon",
         coordinates: [closed],
       };
       const area = calculatePolygonArea(polygonPoints);
-      onSelect(JSON.stringify(geoJson), `Poligon (${polygonPoints.length} köşe - ${formatArea(area)})`);
+      onSelect(JSON.stringify(geoJson), `📐 Poligon (${polygonPoints.length} köşe - ${formatArea(area)})`);
     } else if (mode === "linestring" && linePoints.length >= 2) {
       const geoJson = {
         type: "LineString",
         coordinates: linePoints.map((p) => [p.lng, p.lat]),
       };
       const length = calculatePolylineLength(linePoints);
-      onSelect(JSON.stringify(geoJson), `Çizgi / Hat (${linePoints.length} nokta - ${formatLength(length)})`);
+      onSelect(JSON.stringify(geoJson), `📏 Çizgi / Hat (${linePoints.length} nokta - ${formatLength(length)})`);
     } else if (mode === "cbs" && selectedCbsEntity) {
       const ref = {
         type: "EntityRef",
@@ -540,7 +706,7 @@ export function GeoPointPickerDialog({
         entityType: selectedCbsEntity.entityType,
         geoJson: selectedCbsEntity.geoJson,
       };
-      onSelect(JSON.stringify(ref), `CBS: ${selectedCbsEntity.name} (${selectedCbsEntity.entityType})`);
+      onSelect(JSON.stringify(ref), `🏛️ CBS: ${selectedCbsEntity.name} (${selectedCbsEntity.entityType})`);
     }
     onClose();
   }
@@ -553,6 +719,9 @@ export function GeoPointPickerDialog({
     (mode === "polygon" && polygonPoints.length >= 3) ||
     (mode === "linestring" && linePoints.length >= 2) ||
     (mode === "cbs" && selectedCbsEntity !== null);
+
+  const currentIconDef = MARKER_ICONS[selectedIcon] ?? MARKER_ICONS.pin;
+  const currentColorDef = MARKER_COLORS[selectedColor] ?? MARKER_COLORS.red;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -574,7 +743,7 @@ export function GeoPointPickerDialog({
                   Harita & Coğrafi Varlık Seçici
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Nokta (pin), poligon (parsel/alan), çizgi veya mevcut MBB CBS katmanlarından varlık seçin.
+                  Nokta (özel ikonlu pin), poligon (parsel/alan), çizgi veya mevcut MBB CBS katmanlarından varlık seçin.
                 </DialogDescription>
               </div>
             </div>
@@ -607,7 +776,7 @@ export function GeoPointPickerDialog({
                 )}
               >
                 <MapPin className="size-3.5 text-rose-600" />
-                Nokta (Pin)
+                Nokta (İkonlu Pin)
               </button>
 
               <button
@@ -656,16 +825,34 @@ export function GeoPointPickerDialog({
             {/* Modlara Özel Hızlı Eylemler & Rozetler */}
             <div className="flex items-center gap-2 text-xs">
               {mode === "point" && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={handleLocateMe}
-                  className="gap-1 text-xs"
-                >
-                  <LocateFixed className="size-3 text-sky-600" />
-                  Konumumu Bul
-                </Button>
+                <>
+                  {/* İkon Seçici Tetikleyici Buton */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => setShowIconPicker((prev) => !prev)}
+                    className="gap-1.5 text-xs font-medium border-border/80 shadow-xs"
+                  >
+                    <span
+                      className="size-2.5 rounded-full ring-1 ring-white"
+                      style={{ backgroundColor: currentColorDef.hex }}
+                    />
+                    <span>{currentIconDef.emoji} {currentIconDef.label}</span>
+                    <ChevronDown className="size-3 text-muted-foreground" />
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={handleLocateMe}
+                    className="gap-1 text-xs"
+                  >
+                    <LocateFixed className="size-3 text-sky-600" />
+                    Konumumu Bul
+                  </Button>
+                </>
               )}
 
               {mode === "polygon" && (
@@ -745,7 +932,86 @@ export function GeoPointPickerDialog({
           </div>
         </div>
 
-        {/* CBS Varlık Arama Paneli (Yalnızca CBS modunda haritanın üstünde açılır) */}
+        {/* İkon ve Renk Seçim Paneli (Nokta modunda açılır) */}
+        {mode === "point" && showIconPicker && (
+          <div className="border-b border-border bg-background/95 p-3 backdrop-blur-xs transition-all animate-in fade-in-0 duration-150">
+            <div className="flex flex-col gap-2.5 max-w-4xl">
+              {/* İkon Seçenekleri Grid'i */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+                  <span>İşaretçi / Taşınmaz Türü İkonu:</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowIconPicker(false)}
+                    className="text-xs hover:text-foreground"
+                  >
+                    Kapat
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                  {(Object.keys(MARKER_ICONS) as MarkerIconType[]).map((iconKey) => {
+                    const iconDef = MARKER_ICONS[iconKey];
+                    const isSelected = selectedIcon === iconKey;
+                    return (
+                      <button
+                        key={iconKey}
+                        type="button"
+                        onClick={() => {
+                          setSelectedIcon(iconKey);
+                          // Otomatik uygun rengi de öner
+                          if (iconDef.defaultColor && selectedColor === "red") {
+                            setSelectedColor(iconDef.defaultColor);
+                          }
+                        }}
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg border p-2 text-left text-xs transition-all",
+                          isSelected
+                            ? "border-primary bg-primary/10 font-semibold text-primary shadow-xs"
+                            : "border-border/60 hover:bg-muted/60 text-foreground",
+                        )}
+                      >
+                        <span className="text-base leading-none">{iconDef.emoji}</span>
+                        <span className="truncate">{iconDef.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Renk Seçenekleri Çubuğu */}
+              <div className="flex items-center gap-2 border-t border-border/60 pt-2 text-[11px]">
+                <span className="font-semibold text-muted-foreground flex items-center gap-1">
+                  <Paintbrush className="size-3" />
+                  Pin Rengi:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {(Object.keys(MARKER_COLORS) as MarkerColorType[]).map((colorKey) => {
+                    const colorDef = MARKER_COLORS[colorKey];
+                    const isSelected = selectedColor === colorKey;
+                    return (
+                      <button
+                        key={colorKey}
+                        type="button"
+                        onClick={() => setSelectedColor(colorKey)}
+                        title={colorDef.name}
+                        className={cn(
+                          "size-5 rounded-full transition-transform",
+                          isSelected ? "scale-125 ring-2 ring-foreground shadow-sm" : "hover:scale-110 opacity-80 hover:opacity-100",
+                        )}
+                        style={{ backgroundColor: colorDef.hex }}
+                      />
+                    );
+                  })}
+                </div>
+                <span className="ml-2 font-medium text-muted-foreground">
+                  ({currentColorDef.name})
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CBS Varlık Arama Paneli (CBS modunda açılır) */}
         {mode === "cbs" && (
           <div className="border-b border-border bg-background p-3">
             <div className="relative max-w-lg">
@@ -794,7 +1060,9 @@ export function GeoPointPickerDialog({
           {/* Çizim Rehber Bilgisi */}
           <div className="pointer-events-none absolute bottom-3 left-3 z-[1000] rounded-md bg-background/90 px-3 py-1.5 text-xs text-foreground shadow-md backdrop-blur-xs border border-border/80">
             {mode === "point" && (
-              <span>Haritaya tıklayarak kırmızı işaretçiyi istediğiniz konuma bırakın.</span>
+              <span>
+                Haritaya tıklayarak <strong>{currentIconDef.label}</strong> işaretçisini istediğiniz konuma bırakın.
+              </span>
             )}
             {mode === "polygon" && (
               <span>
@@ -815,9 +1083,9 @@ export function GeoPointPickerDialog({
           <div className="flex items-center gap-2 text-xs">
             {mode === "point" && selectedPoint && (
               <span className="font-mono text-muted-foreground">
-                Seçilen Koordinat:{" "}
+                Seçilen İkon & Konum:{" "}
                 <strong className="text-foreground">
-                  {selectedPoint.lat.toFixed(6)}, {selectedPoint.lng.toFixed(6)}
+                  {currentIconDef.emoji} {currentIconDef.label} ({selectedPoint.lat.toFixed(6)}, {selectedPoint.lng.toFixed(6)})
                 </strong>
               </span>
             )}

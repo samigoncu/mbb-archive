@@ -771,7 +771,12 @@ function MetadataFieldInput({
       if (value.trim().startsWith("{")) {
         try {
           const parsed = JSON.parse(value);
-          if (parsed.type === "Polygon") {
+          if (parsed.type === "Point") {
+            const label = parsed.iconLabel || "Nokta";
+            const lat = typeof parsed.coordinates?.[1] === "number" ? parsed.coordinates[1].toFixed(4) : "";
+            const lng = typeof parsed.coordinates?.[0] === "number" ? parsed.coordinates[0].toFixed(4) : "";
+            displaySummary = `${label} (${lat}, ${lng})`;
+          } else if (parsed.type === "Polygon") {
             const count = Array.isArray(parsed.coordinates?.[0]) ? parsed.coordinates[0].length - 1 : 0;
             displaySummary = `Poligon (${count} köşe)`;
           } else if (parsed.type === "LineString") {
