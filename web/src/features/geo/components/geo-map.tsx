@@ -74,20 +74,67 @@ export function GeoMap({
         settings.zoom,
       );
 
-      if (settings.isBasemapConfigured) {
-        leaflet
-          .tileLayer(settings.tileUrl, {
-            attribution: settings.attribution,
-            maxZoom: 19,
-          })
-          .addTo(map);
+      // Harita altlıkları: Standart, Uydu, Topoğrafya, Açık/Koyu temalar ve tanımlıysa Kurumsal altlık
+      const baseMaps: Record<string, import("leaflet").Layer> = {};
+
+      if (settings.isBasemapConfigured && settings.tileUrl) {
+        const corporate = leaflet.tileLayer(settings.tileUrl, {
+          attribution: settings.attribution || "Kurumsal Harita",
+          maxZoom: 19,
+        });
+        baseMaps["Kurumsal Altlık"] = corporate;
+        corporate.addTo(map);
+      }
+
+      const osm = leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
+        maxZoom: 19,
+      });
+      baseMaps["Standart (OSM)"] = osm;
+
+      const satellite = leaflet.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          attribution: "Tiles &copy; Esri &mdash; Kaynak: Esri, Maxar, Earthstar Geographics",
+          maxZoom: 19,
+        },
+      );
+      baseMaps["Uydu Görünümü (Esri)"] = satellite;
+
+      const topo = leaflet.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+        attribution: 'Harita: &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>',
+        maxZoom: 17,
+        subdomains: "abc",
+      });
+      baseMaps["Topoğrafya (Arazi)"] = topo;
+
+      const light = leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 20,
+        subdomains: "abcd",
+      });
+      baseMaps["Açık / Sade (CartoDB)"] = light;
+
+      const dark = leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 20,
+        subdomains: "abcd",
+      });
+      baseMaps["Koyu Tema (CartoDB)"] = dark;
+
+      const none = leaflet.layerGroup();
+      baseMaps["Altlıksız (Nötr)"] = none;
+
+      // Kurumsal altlık tanımlı değilse Standart OSM varsayılan olarak seçilir
+      if (!settings.isBasemapConfigured || !settings.tileUrl) {
+        osm.addTo(map);
       }
 
       // WMS bindirmeleri vekil uç üzerinden çizilir: adres ve kimlik sunucuda
       // kalır, Leaflet yalnız OGC parametrelerini ekler.
-      if (wmsLayers.length > 0) {
-        const overlays: Record<string, import("leaflet").Layer> = {};
+      const overlays: Record<string, import("leaflet").Layer> = {};
 
+      if (wmsLayers.length > 0) {
         for (const layer of wmsLayers) {
           const overlay = leaflet.tileLayer.wms(`/api/geo/wms/${layer.serviceId}`, {
             layers: layer.layerName,
@@ -99,8 +146,6 @@ export function GeoMap({
           overlays[`${layer.title} · ${layer.serviceTitle}`] = overlay;
           if (layer.visibleByDefault) overlay.addTo(map);
         }
-
-        leaflet.control.layers(undefined, overlays, { collapsed: true }).addTo(map);
 
         // Sorgulanabilir ve o an görünür katmanlar için GetFeatureInfo.
         map.on("click", async event => {
@@ -151,6 +196,8 @@ export function GeoMap({
           popup.setContent(sections.length > 0 ? sections.join("<hr class=\"my-2\" />") : "Bu noktada öznitelik bulunamadı.");
         });
       }
+
+      leaflet.control.layers(baseMaps, overlays, { collapsed: true, position: "topright" }).addTo(map);
 
       mapRef.current = map;
       layerRef.current = leaflet.layerGroup().addTo(map);

@@ -13,7 +13,13 @@ public sealed class MarkSearchIndexedCommandHandler : ICommandHandler<MarkSearch
         if (await _inbox.HasProcessedAsync(command.MessageId, ct)) return Result.Success();
         if (command.DocumentVersionId is null) { _inbox.MarkProcessed(command.MessageId, command.EventName, command.OccurredAt); await _uow.SaveChangesAsync(ct); return Result.Success(); }
         var job = await _jobs.GetByDocumentVersionIdAsync(command.DocumentVersionId.Value, ct);
-        if (job is null) return Result.Failure(Error.NotFound("processing.job_not_found", "Processing job was not found for indexed version."));
+        if (job is null)
+        {
+            _inbox.MarkProcessed(command.MessageId, command.EventName, command.OccurredAt);
+            await _uow.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+
         try
         {
             job.MarkIndexed(command.OccurredAt);
@@ -29,9 +35,12 @@ public sealed class MarkSearchIndexedCommandHandler : ICommandHandler<MarkSearch
             await _uow.SaveChangesAsync(ct);
             return Result.Success();
         }
-        catch (DomainRuleViolationException ex)
+        catch (DomainRuleViolationException)
         {
-            return Result.Failure(Error.Conflict("processing.index_state_conflict", ex.Message));
+            // İş zaten tamamlanmış veya başka bir aşamadaysa dead-letter'a düşürmeden başarılı say
+            _inbox.MarkProcessed(command.MessageId, command.EventName, command.OccurredAt);
+            await _uow.SaveChangesAsync(ct);
+            return Result.Success();
         }
     }
 }
