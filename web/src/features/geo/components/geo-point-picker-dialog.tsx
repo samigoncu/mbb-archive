@@ -26,7 +26,10 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { searchGeoEntitiesAction, getGeoEntityDetailsAction } from "@/features/geo/api/geo-relation-actions";
+import {
+  searchGeoEntitiesAction,
+  getGeoEntityDetailsAction,
+} from "@/features/geo/api/geo-relation-actions";
 import type { GeoEntitySummary } from "@/features/geo/model/geo";
 
 export type GeoPickerMode = "point" | "polygon" | "linestring" | "cbs";
@@ -51,7 +54,10 @@ export type MarkerColorType =
   | "purple"
   | "slate";
 
-export const MARKER_COLORS: Record<MarkerColorType, { name: string; hex: string; bgClass: string }> = {
+export const MARKER_COLORS: Record<
+  MarkerColorType,
+  { name: string; hex: string; bgClass: string }
+> = {
   red: { name: "Kırmızı", hex: "#ef4444", bgClass: "bg-red-500" },
   blue: { name: "Mavi", hex: "#3b82f6", bgClass: "bg-blue-500" },
   green: { name: "Yeşil", hex: "#10b981", bgClass: "bg-emerald-500" },
@@ -176,9 +182,6 @@ function createCustomMarkerIcon(
   });
 }
 
-/**
- * Küresel yüzeyde (WGS84) Geodesic poligon alanı hesaplar (metrekare).
- */
 function calculatePolygonArea(coords: Array<{ lat: number; lng: number }>): number {
   if (coords.length < 3) return 0;
   const radius = 6378137;
@@ -826,7 +829,6 @@ export function GeoPointPickerDialog({
             <div className="flex items-center gap-2 text-xs">
               {mode === "point" && (
                 <>
-                  {/* İkon Seçici Tetikleyici Buton */}
                   <Button
                     type="button"
                     variant="outline"
@@ -936,7 +938,6 @@ export function GeoPointPickerDialog({
         {mode === "point" && showIconPicker && (
           <div className="border-b border-border bg-background/95 p-3 backdrop-blur-xs transition-all animate-in fade-in-0 duration-150">
             <div className="flex flex-col gap-2.5 max-w-4xl">
-              {/* İkon Seçenekleri Grid'i */}
               <div>
                 <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
                   <span>İşaretçi / Taşınmaz Türü İkonu:</span>
@@ -958,7 +959,6 @@ export function GeoPointPickerDialog({
                         type="button"
                         onClick={() => {
                           setSelectedIcon(iconKey);
-                          // Otomatik uygun rengi de öner
                           if (iconDef.defaultColor && selectedColor === "red") {
                             setSelectedColor(iconDef.defaultColor);
                           }
@@ -978,7 +978,6 @@ export function GeoPointPickerDialog({
                 </div>
               </div>
 
-              {/* Renk Seçenekleri Çubuğu */}
               <div className="flex items-center gap-2 border-t border-border/60 pt-2 text-[11px]">
                 <span className="font-semibold text-muted-foreground flex items-center gap-1">
                   <Paintbrush className="size-3" />
