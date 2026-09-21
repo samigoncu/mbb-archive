@@ -115,10 +115,9 @@ export function GeoPointPickerDialog({
         updateMarker(e.latlng.lat, e.latlng.lng);
       });
 
-      // Dialog animasyonu sonrası Leaflet boyutlarını güncelle
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 200);
+      // Dialog animasyonu sonrasi Leaflet boyutlarini guncelle
+      setTimeout(() => map.invalidateSize(), 150);
+      setTimeout(() => map.invalidateSize(), 400);
 
       mapRef.current = map;
     }
@@ -161,10 +160,10 @@ export function GeoPointPickerDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          "overflow-hidden p-0 transition-all duration-200",
+          "overflow-hidden p-0 transition-all duration-200 border border-border/80 shadow-2xl rounded-2xl",
           isMaximized
-            ? "fixed inset-2 h-[calc(100vh-16px)] max-h-[calc(100vh-16px)] w-[calc(100vw-16px)] max-w-[calc(100vw-16px)]"
-            : "w-[94vw] max-w-6xl max-h-[92vh]",
+            ? "!fixed !inset-2 !h-[calc(100vh-16px)] !max-h-[calc(100vh-16px)] !w-[calc(100vw-16px)] !max-w-[calc(100vw-16px)] sm:!max-w-[calc(100vw-16px)]"
+            : "w-[95vw] sm:w-[94vw] md:w-[92vw] lg:w-[90vw] xl:w-[1240px] max-w-[1280px] sm:max-w-none max-h-[92vh]",
         )}
       >
         <div className="flex items-center justify-between border-b border-border p-4 pb-3">
