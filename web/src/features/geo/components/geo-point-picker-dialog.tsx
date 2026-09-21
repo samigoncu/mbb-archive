@@ -3,8 +3,10 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useId, useRef, useState } from "react";
 import {
+  Building2,
   Check,
   ChevronDown,
+  Loader2,
   LocateFixed,
   MapPin,
   Maximize2,
@@ -14,6 +16,7 @@ import {
   Route,
   Search,
   Shapes,
+  Sparkles,
   Trash2,
   Undo2,
   X,
@@ -29,10 +32,11 @@ import {
 import {
   searchGeoEntitiesAction,
   getGeoEntityDetailsAction,
+  detectBuildingAtCoordinateAction,
 } from "@/features/geo/api/geo-relation-actions";
 import type { GeoEntitySummary } from "@/features/geo/model/geo";
 
-export type GeoPickerMode = "point" | "polygon" | "linestring" | "cbs";
+export type GeoPickerMode = "point" | "building" | "polygon" | "linestring" | "cbs";
 
 export type MarkerIconType =
   | "pin"
@@ -52,6 +56,8 @@ export type MarkerColorType =
   | "green"
   | "amber"
   | "purple"
+  | "pink"
+  | "cyan"
   | "slate";
 
 export const MARKER_COLORS: Record<
@@ -61,9 +67,11 @@ export const MARKER_COLORS: Record<
   red: { name: "Kırmızı", hex: "#ef4444", bgClass: "bg-red-500" },
   blue: { name: "Mavi", hex: "#3b82f6", bgClass: "bg-blue-500" },
   green: { name: "Yeşil", hex: "#10b981", bgClass: "bg-emerald-500" },
-  amber: { name: "Turuncu", hex: "#f59e0b", bgClass: "bg-amber-500" },
+  amber: { name: "Turuncu / Kehribar", hex: "#f59e0b", bgClass: "bg-amber-500" },
   purple: { name: "Mor", hex: "#8b5cf6", bgClass: "bg-purple-500" },
-  slate: { name: "Gri / Füme", hex: "#475569", bgClass: "bg-slate-600" },
+  pink: { name: "Pembe / Fuşya", hex: "#ec4899", bgClass: "bg-pink-500" },
+  cyan: { name: "Turkuaz", hex: "#06b6d4", bgClass: "bg-cyan-500" },
+  slate: { name: "Antrasit / Füme", hex: "#334155", bgClass: "bg-slate-700" },
 };
 
 export const MARKER_ICONS: Record<
@@ -132,9 +140,6 @@ export const MARKER_ICONS: Record<
   },
 };
 
-/**
- * Leaflet için özel SVG rozetli pin ikonu üretir.
- */
 function createCustomMarkerIcon(
   leaflet: typeof import("leaflet"),
   iconType: MarkerIconType,
@@ -144,26 +149,26 @@ function createCustomMarkerIcon(
   const colorDef = MARKER_COLORS[colorType] ?? MARKER_COLORS.red;
 
   const html = `
-    <div style="position: relative; width: 36px; height: 42px; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+    <div style="position: relative; width: 38px; height: 44px; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
       <div style="
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         border-radius: 50% 50% 50% 0;
         transform: rotate(-45deg);
         background: ${colorDef.hex};
-        border: 2px solid white;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
       ">
-        <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 16px; height: 16px;">
+        <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 17px; height: 17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));">
           ${iconDef.svg}
         </div>
       </div>
       <div style="
-        width: 8px;
+        width: 10px;
         height: 4px;
         background: rgba(0,0,0,0.35);
         border-radius: 50%;
@@ -176,9 +181,9 @@ function createCustomMarkerIcon(
   return leaflet.divIcon({
     html,
     className: "custom-map-marker-pin",
-    iconSize: [36, 42],
-    iconAnchor: [18, 40],
-    popupAnchor: [0, -36],
+    iconSize: [38, 44],
+    iconAnchor: [19, 42],
+    popupAnchor: [0, -38],
   });
 }
 
@@ -194,8 +199,7 @@ function calculatePolygonArea(coords: Array<{ lat: number; lng: number }>): numb
     const deltaLng = ((p2.lng - p1.lng) * Math.PI) / 180;
     area += deltaLng * (2 + Math.sin(rad1) + Math.sin(rad2));
   }
-  area = Math.abs((area * radius * radius) / 2.0);
-  return area;
+  return Math.abs((area * radius * radius) / 2.0);
 }
 
 function formatArea(sqMeters: number): string {
@@ -261,6 +265,10 @@ export function GeoPointPickerDialog({
   const [selectedColor, setSelectedColor] = useState<MarkerColorType>("red");
   const [showIconPicker, setShowIconPicker] = useState(false);
 
+  // Akıllı bina tespiti durumu
+  const [isDetectingBuilding, setIsDetectingBuilding] = useState(false);
+  const [detectedBuildingInfo, setDetectedBuildingInfo] = useState<string | null>(null);
+
   // Başlangıç modunu belirleme
   const [mode, setMode] = useState<GeoPickerMode>(() => {
     if (defaultMode) return defaultMode;
@@ -301,7 +309,7 @@ export function GeoPointPickerDialog({
     return null;
   });
 
-  // Poligon modu durumu
+  // Poligon modu durumu (bina modu ile ortak çalışır)
   const [polygonPoints, setPolygonPoints] = useState<Array<{ lat: number; lng: number }>>(() => {
     if (initialCoordinate?.trim().startsWith("{")) {
       try {
@@ -421,12 +429,11 @@ export function GeoPointPickerDialog({
       osm.addTo(map);
       leaflet.control.layers(baseMaps, undefined, { collapsed: true, position: "topright" }).addTo(map);
 
-      // Layer gruplarını oluştur
       polygonLayerGroupRef.current = leaflet.layerGroup().addTo(map);
       lineLayerGroupRef.current = leaflet.layerGroup().addTo(map);
 
-      // Harita tıklama dinleyicisi
-      map.on("click", (e) => {
+      // Tıklama olayları
+      map.on("click", async (e) => {
         const currentMode = modeRef.current;
         const { lat, lng } = e.latlng;
 
@@ -436,11 +443,28 @@ export function GeoPointPickerDialog({
             pointMarkerRef.current.setLatLng([lat, lng]);
             pointMarkerRef.current.setIcon(icon);
           } else {
-            pointMarkerRef.current = leaflet
-              .marker([lat, lng], { icon })
-              .addTo(map);
+            pointMarkerRef.current = leaflet.marker([lat, lng], { icon }).addTo(map);
           }
           setSelectedPoint({ lat, lng });
+        } else if (currentMode === "building") {
+          // Akıllı bina tespiti
+          setIsDetectingBuilding(true);
+          setDetectedBuildingInfo("Bina geometrisi taranıyor...");
+          try {
+            const res = await detectBuildingAtCoordinateAction(lat, lng);
+            if (res.success && res.building) {
+              setPolygonPoints(res.building.polygon);
+              setDetectedBuildingInfo(
+                `🏢 ${res.building.name} seçildi (${res.building.polygon.length} köşe - ${formatArea(res.building.areaSquareMeters)})`,
+              );
+            } else {
+              setDetectedBuildingInfo(res.message || "Tıklanan noktada bina yapısı bulunamadı.");
+            }
+          } catch {
+            setDetectedBuildingInfo("Bina tespit servisine ulaşılamadı.");
+          } finally {
+            setIsDetectingBuilding(false);
+          }
         } else if (currentMode === "polygon") {
           setPolygonPoints((prev) => [...prev, { lat, lng }]);
         } else if (currentMode === "linestring") {
@@ -448,7 +472,6 @@ export function GeoPointPickerDialog({
         }
       });
 
-      // Dialog animasyonu sonrası boyutları güncelle
       setTimeout(() => map.invalidateSize(), 150);
       setTimeout(() => map.invalidateSize(), 400);
 
@@ -490,7 +513,7 @@ export function GeoPointPickerDialog({
     void syncPoint();
   }, [selectedPoint, selectedIcon, selectedColor]);
 
-  // Poligon noktaları değiştiğinde katmanı güncelle
+  // Poligon / Bina noktaları değiştiğinde haritada güncelle
   useEffect(() => {
     if (!mapRef.current || !polygonLayerGroupRef.current) return;
     const group = polygonLayerGroupRef.current;
@@ -501,12 +524,14 @@ export function GeoPointPickerDialog({
 
       if (polygonPoints.length === 0) return;
 
+      const isBuilding = mode === "building";
+
       polygonPoints.forEach((pt, idx) => {
         leaflet
           .circleMarker([pt.lat, pt.lng], {
             radius: idx === 0 ? 7 : 5,
-            color: idx === 0 ? "#16a34a" : "#e11d48",
-            fillColor: idx === 0 ? "#22c55e" : "#f43f5e",
+            color: idx === 0 ? "#16a34a" : isBuilding ? "#7c3aed" : "#e11d48",
+            fillColor: idx === 0 ? "#22c55e" : isBuilding ? "#a855f7" : "#f43f5e",
             fillOpacity: 1,
             weight: 2,
           })
@@ -518,10 +543,10 @@ export function GeoPointPickerDialog({
       if (polygonPoints.length >= 3) {
         leaflet
           .polygon(latlngs, {
-            color: "#e11d48",
-            fillColor: "#f43f5e",
-            fillOpacity: 0.25,
-            weight: 2.5,
+            color: isBuilding ? "#7c3aed" : "#e11d48",
+            fillColor: isBuilding ? "#a855f7" : "#f43f5e",
+            fillOpacity: isBuilding ? 0.38 : 0.25,
+            weight: isBuilding ? 3.5 : 2.5,
           })
           .addTo(group);
       } else if (polygonPoints.length === 2) {
@@ -536,7 +561,7 @@ export function GeoPointPickerDialog({
     }
 
     void syncPolygon();
-  }, [polygonPoints]);
+  }, [polygonPoints, mode]);
 
   // Çizgi noktaları değiştiğinde katmanı güncelle
   useEffect(() => {
@@ -686,14 +711,15 @@ export function GeoPointPickerDialog({
         JSON.stringify(geoJson),
         `${iconDef.emoji} ${iconDef.label} (${selectedPoint.lat.toFixed(4)}, ${selectedPoint.lng.toFixed(4)})`,
       );
-    } else if (mode === "polygon" && polygonPoints.length >= 3) {
+    } else if ((mode === "polygon" || mode === "building") && polygonPoints.length >= 3) {
       const closed = [...polygonPoints.map((p) => [p.lng, p.lat]), [polygonPoints[0].lng, polygonPoints[0].lat]];
       const geoJson = {
         type: "Polygon",
         coordinates: [closed],
       };
       const area = calculatePolygonArea(polygonPoints);
-      onSelect(JSON.stringify(geoJson), `📐 Poligon (${polygonPoints.length} köşe - ${formatArea(area)})`);
+      const prefix = mode === "building" ? "🏢 Bina Oturumu" : "📐 Poligon";
+      onSelect(JSON.stringify(geoJson), `${prefix} (${polygonPoints.length} köşe - ${formatArea(area)})`);
     } else if (mode === "linestring" && linePoints.length >= 2) {
       const geoJson = {
         type: "LineString",
@@ -719,7 +745,7 @@ export function GeoPointPickerDialog({
 
   const canConfirm =
     (mode === "point" && selectedPoint !== null) ||
-    (mode === "polygon" && polygonPoints.length >= 3) ||
+    ((mode === "polygon" || mode === "building") && polygonPoints.length >= 3) ||
     (mode === "linestring" && linePoints.length >= 2) ||
     (mode === "cbs" && selectedCbsEntity !== null);
 
@@ -736,7 +762,7 @@ export function GeoPointPickerDialog({
             : "w-[95vw] sm:w-[94vw] md:w-[92vw] lg:w-[90vw] xl:w-[1240px] max-w-[1280px] sm:max-w-none max-h-[92vh]",
         )}
       >
-        {/* Modal Başlığı ve Mod Sekmeleri */}
+        {/* Modal Başlığı */}
         <div className="border-b border-border bg-card/60 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -746,7 +772,7 @@ export function GeoPointPickerDialog({
                   Harita & Coğrafi Varlık Seçici
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Nokta (özel ikonlu pin), poligon (parsel/alan), çizgi veya mevcut MBB CBS katmanlarından varlık seçin.
+                  Renkli ikonlu nokta, tıklanan binanın tamamını seçme, serbest poligon veya CBS katmanından varlık seçin.
                 </DialogDescription>
               </div>
             </div>
@@ -779,7 +805,21 @@ export function GeoPointPickerDialog({
                 )}
               >
                 <MapPin className="size-3.5 text-rose-600" />
-                Nokta (İkonlu Pin)
+                Nokta (Renkli İkon)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode("building")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
+                  mode === "building"
+                    ? "bg-background text-purple-600 dark:text-purple-400 shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Building2 className="size-3.5 text-purple-600" />
+                Binayı Seç (Akıllı)
               </button>
 
               <button
@@ -793,7 +833,7 @@ export function GeoPointPickerDialog({
                 )}
               >
                 <Pentagon className="size-3.5 text-amber-600" />
-                Poligon (Alan / Parsel)
+                Poligon (Elle Çizim)
               </button>
 
               <button
@@ -837,7 +877,7 @@ export function GeoPointPickerDialog({
                     className="gap-1.5 text-xs font-medium border-border/80 shadow-xs"
                   >
                     <span
-                      className="size-2.5 rounded-full ring-1 ring-white"
+                      className="size-3 rounded-full border border-white shadow-xs"
                       style={{ backgroundColor: currentColorDef.hex }}
                     />
                     <span>{currentIconDef.emoji} {currentIconDef.label}</span>
@@ -855,6 +895,38 @@ export function GeoPointPickerDialog({
                     Konumumu Bul
                   </Button>
                 </>
+              )}
+
+              {mode === "building" && (
+                <div className="flex items-center gap-2">
+                  {isDetectingBuilding && (
+                    <span className="flex items-center gap-1 rounded bg-purple-500/10 px-2 py-0.5 font-medium text-purple-600 animate-pulse">
+                      <Loader2 className="size-3 animate-spin" />
+                      Bina Taranıyor...
+                    </span>
+                  )}
+                  {polygonPoints.length > 0 && !isDetectingBuilding && (
+                    <span className="rounded bg-purple-500/15 px-2 py-0.5 font-semibold text-purple-700 dark:text-purple-300">
+                      Bina Oturumu: {polygonPoints.length} Köşe | Alan: {formatArea(polygonArea)}
+                    </span>
+                  )}
+                  {polygonPoints.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => {
+                        setPolygonPoints([]);
+                        setDetectedBuildingInfo(null);
+                      }}
+                      title="Bina seçimini temizle"
+                      className="text-xs text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="size-3" />
+                      Temizle
+                    </Button>
+                  )}
+                </div>
               )}
 
               {mode === "polygon" && (
@@ -936,20 +1008,56 @@ export function GeoPointPickerDialog({
 
         {/* İkon ve Renk Seçim Paneli (Nokta modunda açılır) */}
         {mode === "point" && showIconPicker && (
-          <div className="border-b border-border bg-background/95 p-3 backdrop-blur-xs transition-all animate-in fade-in-0 duration-150">
-            <div className="flex flex-col gap-2.5 max-w-4xl">
-              <div>
-                <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-                  <span>İşaretçi / Taşınmaz Türü İkonu:</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowIconPicker(false)}
-                    className="text-xs hover:text-foreground"
-                  >
-                    Kapat
-                  </button>
+          <div className="border-b border-border bg-background/95 p-3.5 backdrop-blur-xs transition-all animate-in fade-in-0 duration-150">
+            <div className="flex flex-col gap-3 max-w-4xl">
+              {/* Renk Seçenekleri Çubuğu */}
+              <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Paintbrush className="size-3.5 text-primary" />
+                    Simge Rengi Seç:
+                  </span>
+                  <div className="flex items-center gap-1.5 ml-1">
+                    {(Object.keys(MARKER_COLORS) as MarkerColorType[]).map((colorKey) => {
+                      const colorDef = MARKER_COLORS[colorKey];
+                      const isSelected = selectedColor === colorKey;
+                      return (
+                        <button
+                          key={colorKey}
+                          type="button"
+                          onClick={() => setSelectedColor(colorKey)}
+                          title={colorDef.name}
+                          className={cn(
+                            "size-6 rounded-full transition-all flex items-center justify-center border border-white/60",
+                            isSelected ? "scale-115 ring-2 ring-foreground shadow-md" : "opacity-80 hover:opacity-100 hover:scale-105",
+                          )}
+                          style={{ backgroundColor: colorDef.hex }}
+                        >
+                          {isSelected && <Check className="size-3 text-white stroke-[3]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="ml-2 font-medium text-muted-foreground">
+                    ({currentColorDef.name})
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+
+                <button
+                  type="button"
+                  onClick={() => setShowIconPicker(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Paneli Kapat
+                </button>
+              </div>
+
+              {/* İkon Seçenekleri Grid'i (Seçilen renge göre dinamik renkli önizleme) */}
+              <div>
+                <div className="mb-2 text-[11px] font-semibold text-muted-foreground">
+                  Simge / Taşınmaz Türü (Seçili renkle önizleme):
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {(Object.keys(MARKER_ICONS) as MarkerIconType[]).map((iconKey) => {
                     const iconDef = MARKER_ICONS[iconKey];
                     const isSelected = selectedIcon === iconKey;
@@ -957,60 +1065,34 @@ export function GeoPointPickerDialog({
                       <button
                         key={iconKey}
                         type="button"
-                        onClick={() => {
-                          setSelectedIcon(iconKey);
-                          if (iconDef.defaultColor && selectedColor === "red") {
-                            setSelectedColor(iconDef.defaultColor);
-                          }
-                        }}
+                        onClick={() => setSelectedIcon(iconKey)}
                         className={cn(
-                          "flex items-center gap-2 rounded-lg border p-2 text-left text-xs transition-all",
+                          "flex items-center gap-2.5 rounded-lg border p-2 text-left text-xs transition-all",
                           isSelected
-                            ? "border-primary bg-primary/10 font-semibold text-primary shadow-xs"
-                            : "border-border/60 hover:bg-muted/60 text-foreground",
+                            ? "border-primary bg-primary/10 font-semibold text-primary shadow-xs ring-1 ring-primary/40"
+                            : "border-border/70 hover:bg-muted/60 text-foreground",
                         )}
                       >
-                        <span className="text-base leading-none">{iconDef.emoji}</span>
-                        <span className="truncate">{iconDef.label}</span>
+                        {/* Seçilen renkle boyanmış mini rozet simgesi */}
+                        <div
+                          className="size-7 rounded-full flex items-center justify-center text-white shrink-0 shadow-xs border border-white"
+                          style={{ backgroundColor: currentColorDef.hex }}
+                          dangerouslySetInnerHTML={{ __html: iconDef.svg }}
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate font-medium">{iconDef.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{iconDef.emoji}</span>
+                        </div>
                       </button>
                     );
                   })}
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 border-t border-border/60 pt-2 text-[11px]">
-                <span className="font-semibold text-muted-foreground flex items-center gap-1">
-                  <Paintbrush className="size-3" />
-                  Pin Rengi:
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {(Object.keys(MARKER_COLORS) as MarkerColorType[]).map((colorKey) => {
-                    const colorDef = MARKER_COLORS[colorKey];
-                    const isSelected = selectedColor === colorKey;
-                    return (
-                      <button
-                        key={colorKey}
-                        type="button"
-                        onClick={() => setSelectedColor(colorKey)}
-                        title={colorDef.name}
-                        className={cn(
-                          "size-5 rounded-full transition-transform",
-                          isSelected ? "scale-125 ring-2 ring-foreground shadow-sm" : "hover:scale-110 opacity-80 hover:opacity-100",
-                        )}
-                        style={{ backgroundColor: colorDef.hex }}
-                      />
-                    );
-                  })}
-                </div>
-                <span className="ml-2 font-medium text-muted-foreground">
-                  ({currentColorDef.name})
-                </span>
-              </div>
             </div>
           </div>
         )}
 
-        {/* CBS Varlık Arama Paneli (CBS modunda açılır) */}
+        {/* CBS Varlık Arama Paneli */}
         {mode === "cbs" && (
           <div className="border-b border-border bg-background p-3">
             <div className="relative max-w-lg">
@@ -1060,12 +1142,19 @@ export function GeoPointPickerDialog({
           <div className="pointer-events-none absolute bottom-3 left-3 z-[1000] rounded-md bg-background/90 px-3 py-1.5 text-xs text-foreground shadow-md backdrop-blur-xs border border-border/80">
             {mode === "point" && (
               <span>
-                Haritaya tıklayarak <strong>{currentIconDef.label}</strong> işaretçisini istediğiniz konuma bırakın.
+                Haritaya tıklayarak <strong>{currentIconDef.label}</strong> simgesini istediğiniz konuma bırakın.
+              </span>
+            )}
+            {mode === "building" && (
+              <span className="flex items-center gap-1.5 text-purple-700 dark:text-purple-300 font-medium">
+                <Sparkles className="size-3.5 text-purple-600" />
+                {detectedBuildingInfo ||
+                  "Haritada herhangi bir binanın üzerine tıklayın; binanın tüm sınırları otomatik seçilecektir."}
               </span>
             )}
             {mode === "polygon" && (
               <span>
-                Haritaya tıklayarak parselin veya sahanın köşe noktalarını ekleyin (en az 3 köşe).
+                Haritaya tıklayarak köşe noktaları ekleyin (en az 3 köşe).
               </span>
             )}
             {mode === "linestring" && (
@@ -1082,17 +1171,17 @@ export function GeoPointPickerDialog({
           <div className="flex items-center gap-2 text-xs">
             {mode === "point" && selectedPoint && (
               <span className="font-mono text-muted-foreground">
-                Seçilen İkon & Konum:{" "}
+                Seçilen Simge & Konum:{" "}
                 <strong className="text-foreground">
                   {currentIconDef.emoji} {currentIconDef.label} ({selectedPoint.lat.toFixed(6)}, {selectedPoint.lng.toFixed(6)})
                 </strong>
               </span>
             )}
-            {mode === "polygon" && (
+            {(mode === "polygon" || mode === "building") && polygonPoints.length >= 3 && (
               <span className="text-muted-foreground">
-                Seçilen Poligon:{" "}
+                Seçilen Alan:{" "}
                 <strong className="text-foreground">
-                  {polygonPoints.length} Köşe ({formatArea(polygonArea)})
+                  {mode === "building" ? "🏢 Bina Oturumu" : "📐 Poligon"} ({polygonPoints.length} Köşe - {formatArea(polygonArea)})
                 </strong>
               </span>
             )}
