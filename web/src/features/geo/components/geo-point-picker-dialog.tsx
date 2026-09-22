@@ -273,6 +273,7 @@ export function GeoPointPickerDialog({
 
   // Başlangıç modunu belirleme
   const [mode, setMode] = useState<GeoPickerMode>(() => {
+    if (defaultMode) return defaultMode;
     if (initialCoordinate?.trim().startsWith("{")) {
       try {
         const parsed = JSON.parse(initialCoordinate);
@@ -480,6 +481,8 @@ export function GeoPointPickerDialog({
 
       setTimeout(() => map.invalidateSize(), 150);
       setTimeout(() => map.invalidateSize(), 400);
+
+      mapRef.current = map;
     }
 
     void initMap();
